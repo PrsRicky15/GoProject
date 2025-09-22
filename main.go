@@ -9,7 +9,7 @@ func main() {
 	s := "Ricky"
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
-	grid := input.NewRGrid(-5., 5., 20)
+	grid := input.FromLength(20., 60)
 	grid.Display_info()
 	cards := newDeck()
 	hand, _ := deal(cards, 5)
