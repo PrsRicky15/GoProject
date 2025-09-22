@@ -10,7 +10,7 @@ func main() {
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
 	grid := input.FromLength(20., 60)
-	grid.Display_info()
+	grid.DisplayInfo()
 	cards := newDeck()
 	hand, _ := deal(cards, 5)
 

@@ -2,9 +2,9 @@ package main
 
 import "fmt"
 
-func basic() {
+func _() {
 	var MyName string
-	fmt.Println("Enter your name\n")
+	fmt.Println("Enter your name")
 	_, _ = fmt.Scan(&MyName)
 	fmt.Println("My name is ", MyName, " and I am an Engineer")
 
