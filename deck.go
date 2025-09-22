@@ -29,3 +29,7 @@ func (d cardDeck) printWithoutIndex() {
 		fmt.Println(card)
 	}
 }
+
+func deal(d cardDeck, handSize int) (cardDeck, cardDeck) {
+	return d[:handSize], d[handSize:]
+}

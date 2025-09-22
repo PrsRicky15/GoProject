@@ -1,4 +1,4 @@
-package grid_info
+package input
 
 import (
 	"fmt"
@@ -44,7 +44,7 @@ func FromLength(length float64, ngrid uint32) *RGrid {
 	return NewRGrid(grdMin, grdMax, ngrid)
 }
 
-func (grid RGrid) display_info() {
+func (grid RGrid) Display_info() {
 	fmt.Println("Rmin: {} Rmax: {} Nr: {}", grid.rmin, grid.rmax, grid.dR)
 	fmt.Println(grid.kmin, grid.kmax, grid.dK)
 	fmt.Println(grid.cutOffe)
