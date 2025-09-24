@@ -11,7 +11,7 @@ func main() {
 
 	grid, _ := input.NewFromLength(20., 30)
 	fmt.Println("kGrid points:")
-	grid.DisplayKgrid()
+	grid.DisplayRgrid()
 	cards := newDeck()
 
 	fmt.Println("")

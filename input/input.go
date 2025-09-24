@@ -101,22 +101,22 @@ func (g *RGrid) KValues() []float64 {
 }
 
 func (g *RGrid) DisplayInfo() {
-	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, ΔR: %.6g\n", g.rMin, g.rMax, g.deltaR)
-	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, ΔK: %.6g\n", g.kMin, g.kMax, g.deltaK)
+	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, Dr: %.6g\n", g.rMin, g.rMax, g.deltaR)
+	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, Dk: %.6g\n", g.kMin, g.kMax, g.deltaK)
 	fmt.Printf("Grid       - Length: %.6g, Points: %d, Cutoff Energy: %.6g\n",
 		g.length, g.nPoints, g.cutoffE)
 }
 
 func (g *RGrid) DisplayRgrid() {
 	rPoints := g.RValues()
-	for _, val := range rPoints {
-		fmt.Printf("%14.7e\n", val)
+	for ri, val := range rPoints {
+		fmt.Printf("r-%d %14.7e\n", ri, val)
 	}
 }
 
 func (g *RGrid) DisplayKgrid() {
 	kPoints := g.KValues()
-	for _, val := range kPoints {
-		fmt.Printf("%14.7e\n", val)
+	for ki, val := range kPoints {
+		fmt.Printf("k-%d %14.7e\n", ki, val)
 	}
 }
