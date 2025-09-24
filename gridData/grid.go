@@ -120,6 +120,22 @@ func (g *RadGrid) DisplayKgrid() {
 	}
 }
 
+func (g *RadGrid) PotentialAt(Pot Evaluate, x float64) float64 {
+	return Pot.EvaluateAt(x)
+}
+
+func (g *RadGrid) ForceAt(Pot Evaluate, x float64) float64 {
+	return Pot.ForceAt(x)
+}
+
+func (g *RadGrid) PotentialOnGrid(Pot Evaluate) []float64 {
+	return Pot.EvaluateOnGrid(g.RValues())
+}
+
+func (g *RadGrid) ForceOnGrid(Pot Evaluate) []float64 {
+	return Pot.ForceOnGrid(g.RValues())
+}
+
 // TimeGrid time-grid definition for the time-dependent differential equation solver
 type TimeGrid struct {
 	tMin     float64
