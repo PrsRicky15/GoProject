@@ -1,4 +1,4 @@
-package grid
+package input
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type RGrid struct {
 	cutoffE float64
 }
 
-func NewRGrid(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
+func NewRGrid(rMin float64, rMax float64, nPoints uint32) (*RGrid, error) {
 	if nPoints == 0 {
 		return nil, fmt.Errorf("number of grid points must be positive")
 	}
@@ -54,19 +54,11 @@ func NewFromLength(length float64, nPoints uint32) (*RGrid, error) {
 	return NewRGrid(-halfLength, halfLength, nPoints)
 }
 
-func RedimensionFromLength(length float64, nPoints uint32) (*RGrid, error) {
-	return NewFromLength(length, nPoints)
-}
-
-func RedimensionFromRange(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
-	return NewRGrid(rMin, rMax, nPoints)
-}
-
 func (g *RGrid) Redimension(nPoints uint32) (*RGrid, error) {
 	return NewRGrid(g.rMin, g.rMax, nPoints)
 }
 
-func (g *RGrid) RedimensionRange(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
+func (g *RGrid) RedimensionRange(rMin float64, rMax float64, nPoints uint32) (*RGrid, error) {
 	return NewRGrid(rMin, rMax, nPoints)
 }
 
@@ -89,13 +81,6 @@ func (g *RGrid) String() string {
 		g.rMin, g.rMax, g.nPoints, g.deltaR, g.length)
 }
 
-func (g *RGrid) DisplayInfo() {
-	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, ΔR: %.6g\n", g.rMin, g.rMax, g.deltaR)
-	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, ΔK: %.6g\n", g.kMin, g.kMax, g.deltaK)
-	fmt.Printf("Grid       - Length: %.6g, Points: %d, Cutoff Energy: %.6g\n",
-		g.length, g.nPoints, g.cutoffE)
-}
-
 func (g *RGrid) RValues() []float64 {
 	values := make([]float64, g.nPoints)
 	for i := uint32(0); i < g.nPoints; i++ {
@@ -106,8 +91,32 @@ func (g *RGrid) RValues() []float64 {
 
 func (g *RGrid) KValues() []float64 {
 	values := make([]float64, g.nPoints)
-	for i := uint32(0); i < g.nPoints; i++ {
-		values[i] = g.kMin + float64(i)*g.deltaK
+	values[0] = 0.
+	values[g.nPoints/2] = -float64(g.nPoints/2) * g.deltaK
+	for i := uint32(1); i < g.nPoints/2; i++ {
+		values[i] = -float64(i) * g.deltaK
+		values[i+g.nPoints/2] = float64(g.nPoints/2-i) * g.deltaK
 	}
 	return values
+}
+
+func (g *RGrid) DisplayInfo() {
+	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, ΔR: %.6g\n", g.rMin, g.rMax, g.deltaR)
+	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, ΔK: %.6g\n", g.kMin, g.kMax, g.deltaK)
+	fmt.Printf("Grid       - Length: %.6g, Points: %d, Cutoff Energy: %.6g\n",
+		g.length, g.nPoints, g.cutoffE)
+}
+
+func (g *RGrid) DisplayRgrid() {
+	rPoints := g.RValues()
+	for _, val := range rPoints {
+		fmt.Printf("%14.7e\n", val)
+	}
+}
+
+func (g *RGrid) DisplayKgrid() {
+	kPoints := g.KValues()
+	for _, val := range kPoints {
+		fmt.Printf("%14.7e\n", val)
+	}
 }

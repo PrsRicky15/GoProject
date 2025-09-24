@@ -9,14 +9,13 @@ func main() {
 	s := "Ricky"
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
-	grid := input.FromLength(20., 60)
-	grid.DisplayInfo()
+	grid, _ := input.NewFromLength(20., 30)
+	fmt.Println("kGrid points:")
+	grid.DisplayKgrid()
 	cards := newDeck()
+
+	fmt.Println("")
+	fmt.Println("Test card deck:")
 	hand, _ := deal(cards, 5)
-
 	hand.print()
-
-	for i := 0; i <= 5; i++ {
-		fmt.Println("i =", i)
-	}
 }
