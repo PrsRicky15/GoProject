@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="WSL - Ubuntu" type="wsl" uuid="8c9e6839-fa74-417a-ad81-86223ed53f0d">
+        <config>
+          <option name="distributionMsId" value="Ubuntu" />
+          <option name="projectRootOnTarget" value="{exitCode=0, timeout=false, cancelled=false, stdout=/tmp/tmp.qtMkFygmOX&#13;&#10;, stderr=}/GoProject" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="compiledExecutablesVolume">
+              <VolumeState>
+                <option name="remotePath" value="/mnt/e/IndWork/GoExec" />
+              </VolumeState>
+            </option>
+            <option name="goPath" value="/home/prs" />
+            <option name="goRoot" value="/mnt/e/LinuxLib/go/bin/go" />
+            <option name="goVersion" value="go1.25.1 linux/amd64" />
+            <option name="projectSourcesVolume">
+              <VolumeState>
+                <option name="remotePath" value="/mnt/e/IndWork/GoProject" />
+              </VolumeState>
+            </option>
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

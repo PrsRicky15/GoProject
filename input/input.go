@@ -1,4 +1,4 @@
-package input
+package grid
 
 import (
 	"fmt"
@@ -6,48 +6,108 @@ import (
 )
 
 type RGrid struct {
-	rmin    float64
-	rmax    float64
-	nr      uint32
-	dR      float64
-	len     float64
-	dK      float64
-	kmin    float64
-	kmax    float64
-	cutOffe float64
+	rMin    float64
+	rMax    float64
+	nPoints uint32
+	deltaR  float64
+	length  float64
+	deltaK  float64
+	kMin    float64
+	kMax    float64
+	cutoffE float64
 }
 
-func NewRGrid(rmin float64, rmax float64, ngrid uint32) *RGrid {
-	dR := (rmax - rmin) / float64(ngrid)
-	length := rmax - rmin
-	dK := 2 * math.Pi / length
-	kmin := -math.Pi / dR
-	kmax := math.Pi / dR
-	cutOffe := math.Pow(kmax, 2) / 2
+func NewRGrid(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
+	if nPoints == 0 {
+		return nil, fmt.Errorf("number of grid points must be positive")
+	}
+	if rMax <= rMin {
+		return nil, fmt.Errorf("rMax (%g) must be greater than rMin (%g)", rMax, rMin)
+	}
+
+	deltaR := (rMax - rMin) / float64(nPoints)
+	length := rMax - rMin
+	deltaK := 2 * math.Pi / length
+	kMin := -math.Pi / deltaR
+	kMax := math.Pi / deltaR
+	cutoffE := math.Pow(kMax, 2) / 2
 
 	return &RGrid{
-		rmin:    rmin,
-		rmax:    rmax,
-		nr:      ngrid,
-		dR:      dR,
-		len:     length,
-		dK:      dK,
-		kmin:    kmin,
-		kmax:    kmax,
-		cutOffe: cutOffe,
+		rMin:    rMin,
+		rMax:    rMax,
+		nPoints: nPoints,
+		deltaR:  deltaR,
+		length:  length,
+		deltaK:  deltaK,
+		kMin:    kMin,
+		kMax:    kMax,
+		cutoffE: cutoffE,
+	}, nil
+}
+
+func NewFromLength(length float64, nPoints uint32) (*RGrid, error) {
+	if length <= 0 {
+		return nil, fmt.Errorf("length must be positive")
 	}
+
+	halfLength := length / 2
+	return NewRGrid(-halfLength, halfLength, nPoints)
 }
 
-func FromLength(length float64, ngrid uint32) *RGrid {
-	grdMin := -length / 2
-	grdMax := length / 2
-	return NewRGrid(grdMin, grdMax, ngrid)
+func RedimensionFromLength(length float64, nPoints uint32) (*RGrid, error) {
+	return NewFromLength(length, nPoints)
 }
 
-func (grid RGrid) DisplayInfo() {
-	fmt.Println("Rmin: {} Rmax: {} Nr: {}", grid.rmin, grid.rmax, grid.dR)
-	fmt.Println(grid.kmin, grid.kmax, grid.dK)
-	fmt.Println(grid.cutOffe)
-	fmt.Println(grid.len)
-	fmt.Println(grid.nr)
+func RedimensionFromRange(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
+	return NewRGrid(rMin, rMax, nPoints)
+}
+
+func (g *RGrid) Redimension(nPoints uint32) (*RGrid, error) {
+	return NewRGrid(g.rMin, g.rMax, nPoints)
+}
+
+func (g *RGrid) RedimensionRange(rMin, rMax float64, nPoints uint32) (*RGrid, error) {
+	return NewRGrid(rMin, rMax, nPoints)
+}
+
+func (g *RGrid) RedimensionLength(length float64, nPoints uint32) (*RGrid, error) {
+	return NewFromLength(length, nPoints)
+}
+
+func (g *RGrid) RMin() float64    { return g.rMin }
+func (g *RGrid) RMax() float64    { return g.rMax }
+func (g *RGrid) NPoints() uint32  { return g.nPoints }
+func (g *RGrid) DeltaR() float64  { return g.deltaR }
+func (g *RGrid) Length() float64  { return g.length }
+func (g *RGrid) DeltaK() float64  { return g.deltaK }
+func (g *RGrid) KMin() float64    { return g.kMin }
+func (g *RGrid) KMax() float64    { return g.kMax }
+func (g *RGrid) CutoffE() float64 { return g.cutoffE }
+
+func (g *RGrid) String() string {
+	return fmt.Sprintf("RGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaR: %.6g, length: %.6g}",
+		g.rMin, g.rMax, g.nPoints, g.deltaR, g.length)
+}
+
+func (g *RGrid) DisplayInfo() {
+	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, ΔR: %.6g\n", g.rMin, g.rMax, g.deltaR)
+	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, ΔK: %.6g\n", g.kMin, g.kMax, g.deltaK)
+	fmt.Printf("Grid       - Length: %.6g, Points: %d, Cutoff Energy: %.6g\n",
+		g.length, g.nPoints, g.cutoffE)
+}
+
+func (g *RGrid) RValues() []float64 {
+	values := make([]float64, g.nPoints)
+	for i := uint32(0); i < g.nPoints; i++ {
+		values[i] = g.rMin + float64(i)*g.deltaR
+	}
+	return values
+}
+
+func (g *RGrid) KValues() []float64 {
+	values := make([]float64, g.nPoints)
+	for i := uint32(0); i < g.nPoints; i++ {
+		values[i] = g.kMin + float64(i)*g.deltaK
+	}
+	return values
 }
