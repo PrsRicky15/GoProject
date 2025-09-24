@@ -1,4 +1,4 @@
-package input
+package gridData
 
 import (
 	"fmt"

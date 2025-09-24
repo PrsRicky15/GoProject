@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GoProject/input"
+	"GoProject/gridData"
 	"fmt"
 )
 
@@ -9,7 +9,8 @@ func main() {
 	s := "Ricky"
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
-	grid, _ := input.NewFromLength(20., 30)
+	grid, _ := gridData.NewFromLength(20., 30)
+	grid.DisplayInfo()
 	fmt.Println("kGrid points:")
 	grid.DisplayRgrid()
 	cards := newDeck()
