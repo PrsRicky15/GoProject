@@ -25,18 +25,47 @@ type Gaussian struct {
 	strength float64
 }
 
+func xbysigma(x float64, sigma float64) float64 {
+	return x / sigma
+}
+
 func (g Gaussian) EvaluateAt(x float64) float64 {
-	return g.strength * math.Exp(-math.Pow(x-g.cen, 2)/(2*g.sigma*g.sigma))
+	val := xbysigma(x-g.cen, g.sigma)
+	return g.strength * math.Exp(-math.Pow(val, 2)/2)
 }
 
 func (g Gaussian) ForceAt(x float64) float64 {
-	val := -g.strength * (x - g.cen) / (g.sigma * g.sigma)
-	return val * math.Exp(-math.Pow(x-g.cen, 2)/(2*g.sigma*g.sigma))
+	expnt := xbysigma(x-g.cen, g.sigma)
+	val := -g.strength * expnt / g.sigma
+	return val * math.Exp(-math.Pow(expnt, 2)/2)
 }
 
 func (g Gaussian) ForceOnGrid(x []float64) []float64    { return onGrid(g.EvaluateAt, x) }
 func (g Gaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(g.ForceAt, x) }
 
+type SuperGaussian struct {
+	cen      float64
+	sigma    float64
+	strength float64
+	order    uint8
+}
+
+func (sg SuperGaussian) EvaluateAt(x float64) float64 {
+	val := xbysigma(x-sg.cen, sg.sigma)
+	return sg.strength * math.Exp(-math.Pow(val, float64(sg.order)))
+}
+
+func (sg SuperGaussian) ForceAt(x float64) float64 {
+	forder := float64(sg.order)
+	expnt := xbysigma(x-sg.cen, sg.sigma)
+	coef := -sg.strength * forder / sg.sigma * math.Pow(expnt, forder-1)
+	return coef * math.Exp(-math.Pow(expnt, forder))
+}
+
+func (sg SuperGaussian) ForceOnGrid(x []float64) []float64    { return onGrid(sg.EvaluateAt, x) }
+func (sg SuperGaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(sg.ForceAt, x) }
+
+// Harmonic Spring potential
 type Harmonic struct {
 	cen        float64
 	forceConst float64
@@ -47,6 +76,7 @@ func (h Harmonic) ForceAt(x float64) float64            { return -h.forceConst *
 func (h Harmonic) EvaluateOnGrid(x []float64) []float64 { return onGrid(h.EvaluateAt, x) }
 func (h Harmonic) ForceOnGrid(x []float64) []float64    { return onGrid(h.ForceAt, x) }
 
+// Polynomial modeling double-well or multi-well potential
 type Polynomial struct {
 	coeffs []float64
 }
@@ -70,3 +100,22 @@ func (p Polynomial) ForceAt(x float64) float64 {
 
 func (p Polynomial) EvaluateOnGrid(x []float64) []float64 { return onGrid(p.EvaluateAt, x) }
 func (p Polynomial) ForceOnGrid(x []float64) []float64    { return onGrid(p.ForceAt, x) }
+
+type Morse struct {
+	de    float64
+	alpha float64
+	cen   float64
+}
+
+func (m Morse) EvaluateAt(x float64) float64 {
+	return m.de * math.Pow(1.-math.Exp(-m.alpha*(x-m.cen)), 2)
+}
+
+func (m Morse) ForceAt(x float64) float64 {
+	expterm := math.Exp(-m.alpha * (x - m.cen))
+	val := -2 * m.alpha * m.de
+	return val * expterm * (1 - expterm)
+}
+
+func (m Morse) ForceOnGrid(x []float64) []float64    { return onGrid(m.EvaluateAt, x) }
+func (m Morse) EvaluateOnGrid(x []float64) []float64 { return onGrid(m.ForceAt, x) }
