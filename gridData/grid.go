@@ -5,43 +5,73 @@ import (
 	"math"
 )
 
-type RadGrid struct {
-	rMin    float64
-	rMax    float64
-	nPoints uint32
-	deltaR  float64
+type getGridData interface {
+	getMin() float64
+	getdR() float64
+	getNgrid() uint32
+}
+
+func displayGrid(space func() []float64) {
+	points := space()
+	for i, val := range points {
+		fmt.Printf("r-%d %14.7e\n", i, val)
+	}
+}
+
+func generatePoints(g getGridData) []float64 {
+	values := make([]float64, g.getNgrid())
+	for i := uint32(0); i < g.getNgrid(); i++ {
+		values[i] = g.getMin() + float64(i)*g.getdR()
+	}
+	return values
+}
+
+func createGrid(min, max float64, nPoints uint32, paramName string) (setGrid, error) {
+	if nPoints == 0 {
+		return setGrid{0., 0., 0., 0., 0.},
+			fmt.Errorf("number of grid points must be positive")
+	}
+	if max <= min {
+		return setGrid{0., 0., 0., 0., 0.},
+			fmt.Errorf("%sMax (%g) must be greater than %sMin (%g)", paramName, max, paramName, min)
+	}
+	dSpace := (max - min) / float64(nPoints)
+	length := max - min
+	dConjugate := 2 * math.Pi / length
+	cMin := -math.Pi / dSpace
+	cMax := math.Pi / dSpace
+	return setGrid{length, dSpace, dConjugate, cMin, cMax}, nil
+}
+
+type setGrid struct {
 	length  float64
-	deltaK  float64
-	kMin    float64
-	kMax    float64
-	cutoffE float64
+	deltaS  float64
+	deltaCS float64
+	cMin    float64
+	cMax    float64
+}
+
+type RadGrid struct {
+	rMin     float64
+	rMax     float64
+	nPoints  uint32
+	gridData setGrid
+	cutoffE  float64
 }
 
 func NewRGrid(rMin, rMax float64, nPoints uint32) (*RadGrid, error) {
-	if nPoints == 0 {
-		return nil, fmt.Errorf("number of grid points must be positive")
-	}
-	if rMax <= rMin {
-		return nil, fmt.Errorf("rMax (%g) must be greater than rMin (%g)", rMax, rMin)
+	igridData, err := createGrid(rMin, rMax, nPoints, "Rgrid")
+	if err != nil {
+		return nil, err
 	}
 
-	deltaR := (rMax - rMin) / float64(nPoints)
-	length := rMax - rMin
-	deltaK := 2 * math.Pi / length
-	kMin := -math.Pi / deltaR
-	kMax := math.Pi / deltaR
-	cutoffE := math.Pow(kMax, 2) / 2
-
+	cutoffE := math.Pow(igridData.cMax, 2) / 2
 	return &RadGrid{
-		rMin:    rMin,
-		rMax:    rMax,
-		nPoints: nPoints,
-		deltaR:  deltaR,
-		length:  length,
-		deltaK:  deltaK,
-		kMin:    kMin,
-		kMax:    kMax,
-		cutoffE: cutoffE,
+		rMin:     rMin,
+		rMax:     rMax,
+		nPoints:  nPoints,
+		gridData: igridData,
+		cutoffE:  cutoffE,
 	}, nil
 }
 
@@ -53,50 +83,59 @@ func NewFromLength(length float64, nPoints uint32) (*RadGrid, error) {
 	return NewRGrid(-halfLength, halfLength, nPoints)
 }
 
-func (g *RadGrid) Redimension(nPoints uint32) (*RadGrid, error) {
-	return NewRGrid(g.rMin, g.rMax, nPoints)
+func (g *RadGrid) getMin() float64  { return g.rMin }
+func (g *RadGrid) getdR() float64   { return g.gridData.deltaS }
+func (g *RadGrid) getNgrid() uint32 { return g.nPoints }
+
+func (g *RadGrid) redefine(rMin, rMax float64, nPoints uint32) error {
+	igridData, err := createGrid(rMin, rMax, nPoints, "Rgrid")
+	if err != nil {
+		return err
+	}
+	g.rMin = rMin
+	g.rMax = rMax
+	g.nPoints = nPoints
+	g.gridData = igridData
+	g.cutoffE = math.Pow(igridData.cMax, 2) / 2
+	return nil
 }
 
-func (g *RadGrid) RedimensionRange(rMin, rMax float64, nPoints uint32) (*RadGrid, error) {
-	return NewRGrid(rMin, rMax, nPoints)
+func (g *RadGrid) ReDefine(nPoints uint32) error { return g.redefine(g.rMin, g.rMax, nPoints) }
+func (g *RadGrid) ReDefineMinMax(rMin, rMax float64, nPoints uint32) error {
+	return g.redefine(rMin, rMax, nPoints)
 }
-
-func (g *RadGrid) RedimensionLength(length float64, nPoints uint32) (*RadGrid, error) {
-	return NewFromLength(length, nPoints)
-}
-
-func (g *RadGrid) RMin() float64    { return g.rMin }
-func (g *RadGrid) RMax() float64    { return g.rMax }
-func (g *RadGrid) NPoints() uint32  { return g.nPoints }
-func (g *RadGrid) DeltaR() float64  { return g.deltaR }
-func (g *RadGrid) Length() float64  { return g.length }
-func (g *RadGrid) DeltaK() float64  { return g.deltaK }
-func (g *RadGrid) KMin() float64    { return g.kMin }
-func (g *RadGrid) KMax() float64    { return g.kMax }
-func (g *RadGrid) CutoffE() float64 { return g.cutoffE }
-
-func (g *RadGrid) String() string {
-	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaR: %.6g, length: %.6g}",
-		g.rMin, g.rMax, g.nPoints, g.deltaR, g.length)
+func (g *RadGrid) ReDefineLength(length float64, nPoints uint32) error {
+	return g.redefine(-0.5*length, 0.5*length, nPoints)
 }
 
 func (g *RadGrid) RValues() []float64 {
-	values := make([]float64, g.nPoints)
-	for i := uint32(0); i < g.nPoints; i++ {
-		values[i] = g.rMin + float64(i)*g.deltaR
-	}
-	return values
+	return generatePoints(g)
 }
 
 func (g *RadGrid) KValues() []float64 {
 	values := make([]float64, g.nPoints)
 	values[0] = 0.
-	values[g.nPoints/2] = -float64(g.nPoints/2) * g.deltaK
+	values[g.nPoints/2] = -float64(g.nPoints/2) * g.gridData.deltaCS
 	for i := uint32(1); i < g.nPoints/2; i++ {
-		values[i] = -float64(i) * g.deltaK
-		values[i+g.nPoints/2] = float64(g.nPoints/2-i) * g.deltaK
+		values[i] = -float64(i) * g.gridData.deltaCS
+		values[i+g.nPoints/2] = float64(g.nPoints/2-i) * g.gridData.deltaCS
 	}
 	return values
+}
+
+func (g *RadGrid) RMin() float64    { return g.rMin }
+func (g *RadGrid) RMax() float64    { return g.rMax }
+func (g *RadGrid) NPoints() uint32  { return g.nPoints }
+func (g *RadGrid) DeltaR() float64  { return g.gridData.deltaS }
+func (g *RadGrid) Length() float64  { return g.gridData.length }
+func (g *RadGrid) DeltaK() float64  { return g.gridData.deltaCS }
+func (g *RadGrid) KMin() float64    { return g.gridData.cMin }
+func (g *RadGrid) KMax() float64    { return g.gridData.cMax }
+func (g *RadGrid) CutoffE() float64 { return g.cutoffE }
+
+func (g *RadGrid) String() string {
+	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaR: %.6g, length: %.6g}",
+		g.rMin, g.rMax, g.nPoints, g.gridData.deltaS, g.gridData.length)
 }
 
 func (g *RadGrid) DisplayInfo() {
@@ -106,46 +145,30 @@ func (g *RadGrid) DisplayInfo() {
 		g.Length(), g.NPoints(), g.CutoffE())
 }
 
-func (g *RadGrid) DisplayRgrid() {
-	rPoints := g.RValues()
-	for ri, val := range rPoints {
-		fmt.Printf("r-%d %14.7e\n", ri, val)
-	}
-}
+func (g *RadGrid) DisplayRgrid()                               { displayGrid(g.RValues) }
+func (g *RadGrid) DisplayKgrid()                               { displayGrid(g.KValues) }
+func (g *RadGrid) PotentialAt(pot Evaluate, x float64) float64 { return pot.EvaluateAt(x) }
+func (g *RadGrid) ForceAt(pot Evaluate, x float64) float64     { return pot.ForceAt(x) }
+func (g *RadGrid) PotentialOnGrid(pot Evaluate) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
+func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.ForceOnGrid(g.RValues()) }
 
-func (g *RadGrid) DisplayKgrid() {
-	kPoints := g.KValues()
-	for ki, val := range kPoints {
-		fmt.Printf("k-%d %14.7e\n", ki, val)
-	}
-}
-
-func (g *RadGrid) PotentialAt(Pot Evaluate, x float64) float64 {
-	return Pot.EvaluateAt(x)
-}
-
-func (g *RadGrid) ForceAt(Pot Evaluate, x float64) float64 {
-	return Pot.ForceAt(x)
-}
-
-func (g *RadGrid) PotentialOnGrid(Pot Evaluate) []float64 {
-	return Pot.EvaluateOnGrid(g.RValues())
-}
-
-func (g *RadGrid) ForceOnGrid(Pot Evaluate) []float64 {
-	return Pot.ForceOnGrid(g.RValues())
-}
-
-// TimeGrid time-grid definition for the time-dependent differential equation solver
+// TimeGrid represents a time-grid definition for time-dependent differential equation solver
 type TimeGrid struct {
 	tMin     float64
 	tMax     float64
+	length   float64
 	nPoints  uint32
 	deltaT   float64
-	length   float64
 	dOmega   float64
 	omegaMin float64
 	omegaMax float64
+}
+
+func DisplayTimeGrid(space func() []float64) {
+	points := space()
+	for ri, val := range points {
+		fmt.Printf("t-%d %14.7e\n", ri, val)
+	}
 }
 
 func NewTimeGrid(tMin, tMax float64, nPoints uint32) (*TimeGrid, error) {
