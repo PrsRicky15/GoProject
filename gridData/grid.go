@@ -5,10 +5,21 @@ import (
 	"math"
 )
 
+// setGrid Setup some parameters for time- and space- grid
+type setGrid struct {
+	length  float64
+	deltaS  float64
+	deltaCS float64
+	cMin    float64
+	cMax    float64
+}
+
+// getGridData get the basic input and setup time- and space- grid
 type getGridData interface {
 	getMin() float64
-	getdR() float64
+	getdS() float64
 	getNgrid() uint32
+	getdCS() float64
 }
 
 func displayGrid(space func() []float64) {
@@ -21,7 +32,19 @@ func displayGrid(space func() []float64) {
 func generatePoints(g getGridData) []float64 {
 	values := make([]float64, g.getNgrid())
 	for i := uint32(0); i < g.getNgrid(); i++ {
-		values[i] = g.getMin() + float64(i)*g.getdR()
+		values[i] = g.getMin() + float64(i)*g.getdS()
+	}
+	return values
+}
+
+func generateConjugatePoints(g getGridData) []float64 {
+	nby2 := g.getNgrid() / 2
+	values := make([]float64, g.getNgrid())
+	values[0] = 0.
+	values[g.getNgrid()/2] = -float64(nby2) * g.getdCS()
+	for i := uint32(1); i < nby2; i++ {
+		values[i] = -float64(i) * g.getdCS()
+		values[i+nby2] = float64(nby2-i) * g.getdCS()
 	}
 	return values
 }
@@ -43,14 +66,7 @@ func createGrid(min, max float64, nPoints uint32, paramName string) (setGrid, er
 	return setGrid{length, dSpace, dConjugate, cMin, cMax}, nil
 }
 
-type setGrid struct {
-	length  float64
-	deltaS  float64
-	deltaCS float64
-	cMin    float64
-	cMax    float64
-}
-
+// RadGrid Represents a real-space grid
 type RadGrid struct {
 	rMin     float64
 	rMax     float64
@@ -84,9 +100,9 @@ func NewFromLength(length float64, nPoints uint32) (*RadGrid, error) {
 }
 
 func (g *RadGrid) getMin() float64  { return g.rMin }
-func (g *RadGrid) getdR() float64   { return g.gridData.deltaS }
+func (g *RadGrid) getdS() float64   { return g.gridData.deltaS }
+func (g *RadGrid) getdCS() float64  { return g.gridData.deltaCS }
 func (g *RadGrid) getNgrid() uint32 { return g.nPoints }
-
 func (g *RadGrid) redefine(rMin, rMax float64, nPoints uint32) error {
 	igridData, err := createGrid(rMin, rMax, nPoints, "Rgrid")
 	if err != nil {
@@ -99,7 +115,6 @@ func (g *RadGrid) redefine(rMin, rMax float64, nPoints uint32) error {
 	g.cutoffE = math.Pow(igridData.cMax, 2) / 2
 	return nil
 }
-
 func (g *RadGrid) ReDefine(nPoints uint32) error { return g.redefine(g.rMin, g.rMax, nPoints) }
 func (g *RadGrid) ReDefineMinMax(rMin, rMax float64, nPoints uint32) error {
 	return g.redefine(rMin, rMax, nPoints)
@@ -107,31 +122,17 @@ func (g *RadGrid) ReDefineMinMax(rMin, rMax float64, nPoints uint32) error {
 func (g *RadGrid) ReDefineLength(length float64, nPoints uint32) error {
 	return g.redefine(-0.5*length, 0.5*length, nPoints)
 }
-
-func (g *RadGrid) RValues() []float64 {
-	return generatePoints(g)
-}
-
-func (g *RadGrid) KValues() []float64 {
-	values := make([]float64, g.nPoints)
-	values[0] = 0.
-	values[g.nPoints/2] = -float64(g.nPoints/2) * g.gridData.deltaCS
-	for i := uint32(1); i < g.nPoints/2; i++ {
-		values[i] = -float64(i) * g.gridData.deltaCS
-		values[i+g.nPoints/2] = float64(g.nPoints/2-i) * g.gridData.deltaCS
-	}
-	return values
-}
-
-func (g *RadGrid) RMin() float64    { return g.rMin }
-func (g *RadGrid) RMax() float64    { return g.rMax }
-func (g *RadGrid) NPoints() uint32  { return g.nPoints }
-func (g *RadGrid) DeltaR() float64  { return g.gridData.deltaS }
-func (g *RadGrid) Length() float64  { return g.gridData.length }
-func (g *RadGrid) DeltaK() float64  { return g.gridData.deltaCS }
-func (g *RadGrid) KMin() float64    { return g.gridData.cMin }
-func (g *RadGrid) KMax() float64    { return g.gridData.cMax }
-func (g *RadGrid) CutoffE() float64 { return g.cutoffE }
+func (g *RadGrid) RValues() []float64 { return generatePoints(g) }
+func (g *RadGrid) KValues() []float64 { return generateConjugatePoints(g) }
+func (g *RadGrid) RMin() float64      { return g.rMin }
+func (g *RadGrid) RMax() float64      { return g.rMax }
+func (g *RadGrid) NPoints() uint32    { return g.nPoints }
+func (g *RadGrid) DeltaR() float64    { return g.gridData.deltaS }
+func (g *RadGrid) Length() float64    { return g.gridData.length }
+func (g *RadGrid) DeltaK() float64    { return g.gridData.deltaCS }
+func (g *RadGrid) KMin() float64      { return g.gridData.cMin }
+func (g *RadGrid) KMax() float64      { return g.gridData.cMax }
+func (g *RadGrid) CutoffE() float64   { return g.cutoffE }
 
 func (g *RadGrid) String() string {
 	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaR: %.6g, length: %.6g}",
@@ -156,115 +157,74 @@ func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.Forc
 type TimeGrid struct {
 	tMin     float64
 	tMax     float64
-	length   float64
 	nPoints  uint32
-	deltaT   float64
-	dOmega   float64
-	omegaMin float64
-	omegaMax float64
-}
-
-func DisplayTimeGrid(space func() []float64) {
-	points := space()
-	for ri, val := range points {
-		fmt.Printf("t-%d %14.7e\n", ri, val)
-	}
+	gridData setGrid
 }
 
 func NewTimeGrid(tMin, tMax float64, nPoints uint32) (*TimeGrid, error) {
-	if nPoints == 0 {
-		return nil, fmt.Errorf("number of grid points must be positive")
+	igridData, err := createGrid(tMin, tMax, nPoints, "Time-grid")
+	if err != nil {
+		return nil, err
 	}
-	if tMax <= tMin {
-		return nil, fmt.Errorf("rMax (%g) must be greater than rMin (%g)", tMax, tMin)
-	}
-
-	deltaT := (tMax - tMin) / float64(nPoints)
-	length := tMax - tMin
-	deltaW := 2 * math.Pi / length
-	wMin := -math.Pi / deltaT
-	wMax := math.Pi / deltaT
-
 	return &TimeGrid{
 		tMin:     tMin,
 		tMax:     tMax,
 		nPoints:  nPoints,
-		deltaT:   deltaT,
-		length:   length,
-		dOmega:   deltaW,
-		omegaMin: wMin,
-		omegaMax: wMax,
+		gridData: igridData,
 	}, nil
 }
 
 func TimeGridFromLength(length float64, nPoints uint32) (*TimeGrid, error) {
 	if length <= 0 {
-		return nil, fmt.Errorf("length must be positive")
+		return nil, fmt.Errorf("total duration must be positive")
 	}
 	return NewTimeGrid(0., length, nPoints)
 }
 
-func (g *TimeGrid) Redimension(nPoints uint32) (*TimeGrid, error) {
-	return NewTimeGrid(g.tMin, g.tMax, nPoints)
+func (t *TimeGrid) getMin() float64  { return t.tMin }
+func (t *TimeGrid) getdS() float64   { return t.gridData.deltaS }
+func (t *TimeGrid) getdCS() float64  { return t.gridData.deltaCS }
+func (t *TimeGrid) getNgrid() uint32 { return t.nPoints }
+func (t *TimeGrid) redefine(tMin, tMax float64, nPoints uint32) error {
+	igridData, err := createGrid(tMin, tMax, nPoints, "Time-grid")
+	if err != nil {
+		return err
+	}
+	t.tMin = tMin
+	t.tMax = tMax
+	t.nPoints = nPoints
+	t.gridData = igridData
+	return nil
 }
 
-func (g *TimeGrid) RedimensionRange(tMin, tMax float64, nPoints uint32) (*TimeGrid, error) {
-	return NewTimeGrid(tMin, tMax, nPoints)
+func (t *TimeGrid) ReDefine(nPoints uint32) error { return t.redefine(t.tMin, t.tMax, nPoints) }
+func (t *TimeGrid) ReDefineMinMax(tMin, tMax float64, nPoints uint32) error {
+	return t.redefine(tMin, tMax, nPoints)
+}
+func (t *TimeGrid) ReDefineLength(length float64, nPoints uint32) error {
+	return t.redefine(0., 0.5*length, nPoints)
 }
 
-func (g *TimeGrid) RedimensionLength(length float64, nPoints uint32) (*TimeGrid, error) {
-	return TimeGridFromLength(length, nPoints)
-}
+func (t *TimeGrid) TMin() float64      { return t.tMin }
+func (t *TimeGrid) TMax() float64      { return t.tMax }
+func (t *TimeGrid) NPoints() uint32    { return t.nPoints }
+func (t *TimeGrid) DeltaT() float64    { return t.gridData.deltaS }
+func (t *TimeGrid) Length() float64    { return t.gridData.length }
+func (t *TimeGrid) DOmega() float64    { return t.gridData.deltaCS }
+func (t *TimeGrid) OmegaMin() float64  { return t.gridData.cMin }
+func (t *TimeGrid) OmegaMax() float64  { return t.gridData.cMax }
+func (t *TimeGrid) TValues() []float64 { return generatePoints(t) }
+func (t *TimeGrid) WValues() []float64 { return generateConjugatePoints(t) }
+func (t *TimeGrid) DisplayTimeGrid()   { displayGrid(t.TValues) }
+func (t *TimeGrid) DisplayOmegaGrid()  { displayGrid(t.WValues) }
 
-func (g *TimeGrid) TMin() float64     { return g.tMin }
-func (g *TimeGrid) TMax() float64     { return g.tMax }
-func (g *TimeGrid) NPoints() uint32   { return g.nPoints }
-func (g *TimeGrid) DeltaT() float64   { return g.deltaT }
-func (g *TimeGrid) Length() float64   { return g.length }
-func (g *TimeGrid) DOmega() float64   { return g.dOmega }
-func (g *TimeGrid) OmegaMin() float64 { return g.omegaMin }
-func (g *TimeGrid) OmegaMax() float64 { return g.omegaMax }
-
-func (g *TimeGrid) String() string {
+func (t *TimeGrid) String() string {
 	return fmt.Sprintf("TimeGrid{tMin: %.6g, tMax: %.6g, nPoints: %d, deltaT: %.6g, length: %.6g}",
-		g.tMin, g.tMax, g.nPoints, g.deltaT, g.length)
+		t.tMin, t.tMax, t.nPoints, t.gridData.deltaS, t.gridData.length)
 }
 
-func (g *TimeGrid) TValues() []float64 {
-	values := make([]float64, g.nPoints)
-	for i := uint32(0); i < g.nPoints; i++ {
-		values[i] = g.tMin + float64(i)*g.deltaT
-	}
-	return values
-}
-
-func (g *TimeGrid) WValues() []float64 {
-	values := make([]float64, g.nPoints)
-	values[0] = 0.
-	values[g.nPoints/2] = -float64(g.nPoints/2) * g.deltaT
-	for i := uint32(1); i < g.nPoints/2; i++ {
-		values[i] = -float64(i) * g.deltaT
-		values[i+g.nPoints/2] = float64(g.nPoints/2-i) * g.dOmega
-	}
-	return values
-}
-
-func (g *TimeGrid) DisplayInfo() {
-	fmt.Printf("Real Time - Min: %.6g, Max: %.6g, Dr: %.6g\n", g.TMin(), g.TMax(), g.DeltaT())
-	fmt.Printf("w Space    - Min: %.6g, Max: %.6g, Dw: %.6g\n", g.OmegaMin(), g.OmegaMax(), g.DOmega())
-	fmt.Printf("Grid       - Length: %.6g, Points: %d\n", g.Length(), g.NPoints())
-}
-
-func (g *TimeGrid) DisplayTimeGrid() {
-	rPoints := g.TValues()
-	for ri, val := range rPoints {
-		fmt.Printf("t-%d %14.7e\n", ri, val)
-	}
-}
-
-func (g *TimeGrid) DisplayOmegaGrid() {
-	kPoints := g.WValues()
-	for ki, val := range kPoints {
-		fmt.Printf("w-%d %14.7e\n", ki, val)
-	}
+func (t *TimeGrid) DisplayInfo() {
+	fmt.Printf("Real Time - Min: %.6g, Max: %.6g, Dr: %.6g\n", t.TMin(), t.TMax(), t.DeltaT())
+	fmt.Printf("w Space    - Min: %.6g, Max: %.6g, Dw: %.6g\n", t.OmegaMin(), t.OmegaMax(), t.DOmega())
+	fmt.Printf("Grid       - Length: %.6g, Points: %d\n", t.Length(), t.NPoints())
 }
