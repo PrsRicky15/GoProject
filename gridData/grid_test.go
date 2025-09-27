@@ -1,6 +1,8 @@
 package gridData
 
 import (
+	"fmt"
+	"os"
 	"testing"
 )
 
@@ -25,7 +27,16 @@ func TestTimeGridFromLength(t *testing.T) {
 }
 
 func TestNewRGridFromFile(t *testing.T) {
-	grid, err := NewRGridFromFile("GridInfo")
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run main.go <file-path>")
+		os.Exit(1)
+	}
+
+	filePath := os.Args[1]
+
+	fmt.Println("filePath:", filePath)
+
+	grid, err := NewRGridFromFile(filePath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

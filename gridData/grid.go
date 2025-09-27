@@ -104,17 +104,12 @@ func NewRGridFromFile(dirPath string) (*RadGrid, error) {
 		return nil, fmt.Errorf("%s is not a directory", dirPath)
 	}
 
-	filePath := dirPath + "/grid.inp"
+	filePath := dirPath + "/rgrid.inp"
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not open %s: %w", filePath, err)
 	}
-
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-		}
-	}(file)
 
 	var rmin, rmax float64
 	var nPoints int
@@ -145,7 +140,7 @@ func NewRGridFromFile(dirPath string) (*RadGrid, error) {
 		}
 	}
 
-	return NewRGrid(-rmin, rmax, uint32(nPoints))
+	return NewRGrid(rmin, rmax, uint32(nPoints))
 }
 
 func NewFromLength(length float64, nPoints uint32) (*RadGrid, error) {
