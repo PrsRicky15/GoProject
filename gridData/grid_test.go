@@ -6,6 +6,40 @@ import (
 	"testing"
 )
 
+func TestNewRGrid(t *testing.T) {
+	grid, err := NewRGrid(0, 25, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if grid.rMin != 0. {
+		t.Errorf("expected tMin = %v, got %v", 0., grid.rMin)
+	}
+	if grid.rMax != 25. {
+		t.Errorf("expected tMax = %v, got %v", 25, grid.rMax)
+	}
+	if grid.nPoints != 100 {
+		t.Errorf("expected nPoints = %v, got %v", 100, grid.nPoints)
+	}
+}
+
+func TestNewFromLength(t *testing.T) {
+	grid, err := NewFromLength(10, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if grid.rMin != -5. {
+		t.Errorf("expected tMin = %v, got %v", -5, grid.rMin)
+	}
+	if grid.rMax != 5. {
+		t.Errorf("expected tMax = %v, got %v", 5, grid.rMax)
+	}
+	if grid.nPoints != 100 {
+		t.Errorf("expected nPoints = %v, got %v", 100, grid.nPoints)
+	}
+}
+
 func TestTimeGridFromLength(t *testing.T) {
 	grid, err := NewTimeGrid(10, 100, 100)
 	if err != nil {
