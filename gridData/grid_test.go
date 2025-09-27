@@ -7,10 +7,7 @@ import (
 )
 
 func TestTimeGridFromLength(t *testing.T) {
-	length := 10.0
-	nPoints := uint32(100)
-
-	grid, err := TimeGridFromLength(length, nPoints)
+	grid, err := NewTimeGrid(10, 100, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -18,11 +15,11 @@ func TestTimeGridFromLength(t *testing.T) {
 	if grid.tMin != 0.0 {
 		t.Errorf("expected tMin = 0.0, got %v", grid.tMin)
 	}
-	if grid.tMax != length {
-		t.Errorf("expected tMax = %v, got %v", length, grid.tMax)
+	if grid.tMax != 1000. {
+		t.Errorf("expected tMax = %v, got %v", 1000, grid.tMax)
 	}
-	if grid.nPoints != nPoints {
-		t.Errorf("expected nPoints = %v, got %v", nPoints, grid.nPoints)
+	if grid.nPoints != 100*100 {
+		t.Errorf("expected nPoints = %v, got %v", 100*100, grid.nPoints)
 	}
 }
 
