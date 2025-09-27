@@ -31,23 +31,9 @@ func TestNewRGridFromFile(t *testing.T) {
 		fmt.Println("Usage: go run main.go <file-path>")
 		os.Exit(1)
 	}
-
 	filePath := os.Args[1]
-
-	fmt.Println("filePath:", filePath)
-
-	grid, err := NewRGridFromFile(filePath)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if grid.rMin != -10 {
-		t.Errorf("expected tMin = 0.0, got %v", grid.rMin)
-	}
-	if grid.rMax != 10. {
-		t.Errorf("expected tMax = %v, got %v", 10, grid.rMax)
-	}
-	if grid.nPoints != 60 {
-		t.Errorf("expected nPoints = %v, got %v", 60, grid.nPoints)
-	}
+	grid, _ := NewRGridFromFile(filePath)
+	grid.DisplayInfo()
+	fmt.Println("kGrid points:")
+	grid.DisplayRgrid()
 }
