@@ -1,8 +1,12 @@
 package gridData
 
 import (
+	"bufio"
 	"fmt"
 	"math"
+	"os"
+	"strconv"
+	"strings"
 )
 
 // setGrid Setup some parameters for time- and space- grid
@@ -89,6 +93,59 @@ func NewRGrid(rMin, rMax float64, nPoints uint32) (*RadGrid, error) {
 		gridData: igridData,
 		cutoffE:  cutoffE,
 	}, nil
+}
+
+func NewRGridFromFile(dirPath string) (*RadGrid, error) {
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("directory check failed: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", dirPath)
+	}
+
+	filePath := dirPath + "/grid.inp"
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open %s: %w", filePath, err)
+	}
+
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+		}
+	}(file)
+
+	var rmin, rmax float64
+	var nPoints int
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "rMin":
+			rmin, _ = strconv.ParseFloat(value, 64)
+		case "rMax":
+			rmax, _ = strconv.ParseFloat(value, 64)
+		case "nPoints":
+			nPoints, _ = strconv.Atoi(value)
+		}
+	}
+
+	return NewRGrid(-rmin, rmax, uint32(nPoints))
 }
 
 func NewFromLength(length float64, nPoints uint32) (*RadGrid, error) {

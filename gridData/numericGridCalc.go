@@ -1,5 +1,5 @@
 package gridData
 
-type Integrator interface {
+type InitialValueIntegrator interface {
 	Step(s *ModelSystem) SystemInfo
 }

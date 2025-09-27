@@ -23,3 +23,20 @@ func TestTimeGridFromLength(t *testing.T) {
 		t.Errorf("expected nPoints = %v, got %v", nPoints, grid.nPoints)
 	}
 }
+
+func TestNewRGridFromFile(t *testing.T) {
+	grid, err := NewRGridFromFile("GridInfo")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if grid.rMin != -10 {
+		t.Errorf("expected tMin = 0.0, got %v", grid.rMin)
+	}
+	if grid.rMax != 10. {
+		t.Errorf("expected tMax = %v, got %v", 10, grid.rMax)
+	}
+	if grid.nPoints != 60 {
+		t.Errorf("expected nPoints = %v, got %v", 60, grid.nPoints)
+	}
+}
