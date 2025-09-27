@@ -207,30 +207,82 @@ func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.Forc
 
 // TimeGrid represents a time-grid definition for time-dependent differential equation solver
 type TimeGrid struct {
-	tMin     float64
-	tMax     float64
-	nPoints  uint32
-	gridData setGrid
+	tMin       float64
+	tMax       float64
+	gridData   setGrid
+	macroDt    float64
+	microSteps uint32
+	macroSteps uint32
+	nPoints    uint32
 }
 
-func NewTimeGrid(tMin, tMax float64, nPoints uint32) (*TimeGrid, error) {
+func NewTimeGrid(MacroDT float64, MacroSteps, MicroSteps uint32) (*TimeGrid, error) {
+	nPoints := MacroSteps * MicroSteps
+	tMin := 0.
+	tMax := MacroDT * float64(MacroSteps)
 	igridData, err := createGrid(tMin, tMax, nPoints, "Time-grid")
 	if err != nil {
 		return nil, err
 	}
 	return &TimeGrid{
-		tMin:     tMin,
-		tMax:     tMax,
-		nPoints:  nPoints,
-		gridData: igridData,
+		tMin:       tMin,
+		tMax:       tMax,
+		gridData:   igridData,
+		macroDt:    MacroDT,
+		microSteps: MicroSteps,
+		macroSteps: MacroSteps,
+		nPoints:    nPoints,
 	}, nil
 }
 
-func TimeGridFromLength(length float64, nPoints uint32) (*TimeGrid, error) {
-	if length <= 0 {
-		return nil, fmt.Errorf("total duration must be positive")
+func NewTGridFromFile(dirPath string) (*TimeGrid, error) {
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("directory check failed: %w", err)
 	}
-	return NewTimeGrid(0., length, nPoints)
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", dirPath)
+	}
+
+	filePath := dirPath + "/tgrid.inp"
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open %s: %w", filePath, err)
+	}
+
+	var MacroDt float64
+	var MacroSteps int
+	var MicroSteps int
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "MacroDT":
+			MacroDt, _ = strconv.ParseFloat(value, 64)
+		case "MacroSteps":
+
+			MacroSteps, _ = strconv.Atoi(value)
+		case "MicroSteps":
+			MicroSteps, _ = strconv.Atoi(value)
+		}
+	}
+
+	return NewTimeGrid(MacroDt, uint32(MacroSteps), uint32(MicroSteps))
 }
 
 func (t *TimeGrid) getMin() float64  { return t.tMin }
