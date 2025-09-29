@@ -136,8 +136,8 @@ func (sg SuperGaussian) EvaluateAt(x float64) float64 {
 func (sg SuperGaussian) ForceAt(x float64) float64 {
 	forder := float64(sg.Order)
 	expnt := xbysigma(x-sg.Cen, sg.Sigma)
-	coef := -sg.Strength * forder / sg.Sigma * math.Pow(expnt, forder-1)
-	return coef * math.Exp(-math.Pow(expnt, forder))
+	coeffs := -sg.Strength * forder / sg.Sigma * math.Pow(expnt, forder-1)
+	return coeffs * math.Exp(-math.Pow(expnt, forder))
 }
 
 func (sg SuperGaussian) ForceOnGrid(x []float64) []float64    { return onGrid(sg.EvaluateAt, x) }
