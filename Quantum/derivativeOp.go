@@ -57,8 +57,15 @@ func MatrixDiagonalize(Op EvaluateOp, n int) ([]float64, *mat.Dense, error) {
 }
 
 type KeDVR struct {
-	grid gridData.RadGrid
+	grid *gridData.RadGrid
 	mass float64
+}
+
+func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDVR {
+	return &KeDVR{
+		grid: grid,
+		mass: mass,
+	}
 }
 
 func (k *KeDVR) CanonicalEvaluate(float64) mat.Matrix {
