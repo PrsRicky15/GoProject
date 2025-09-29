@@ -20,18 +20,18 @@ func onGrid(f func(float64) float64, x []float64) []float64 {
 
 // SoftCore Potential
 type SoftCore struct {
-	charge    float64
-	centre    float64
-	softParam float64
+	Charge    float64
+	Centre    float64
+	SoftParam float64
 }
 
 func (sc SoftCore) EvaluateAt(x float64) float64 {
-	return sc.charge / math.Sqrt(math.Pow(x-sc.centre, 2)+math.Pow(sc.softParam, 2))
+	return sc.Charge / math.Sqrt(math.Pow(x-sc.Centre, 2)+math.Pow(sc.SoftParam, 2))
 }
 
 func (sc SoftCore) ForceAt(x float64) float64 {
-	coef := sc.charge * (x - sc.centre)
-	val := (x-sc.centre)*(x-sc.centre) + sc.softParam*sc.softParam
+	coef := sc.Charge * (x - sc.Centre)
+	val := (x-sc.Centre)*(x-sc.Centre) + sc.SoftParam*sc.SoftParam
 	return coef * math.Pow(val, 3./2.)
 }
 

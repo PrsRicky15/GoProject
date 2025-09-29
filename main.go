@@ -18,7 +18,12 @@ func main() {
 	s := "Ricky"
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
+	potent := gridData.SoftCore{Charge: 1., SoftParam: 0.5}
 	grid, _ := gridData.NewRGridFromFile(filePath)
+	err := grid.PrintToFile(potent, "softcore.dat", "%21.14e")
+	if err != nil {
+		return
+	}
 	grid.DisplayInfo()
 	fmt.Println("kGrid points:")
 	grid.DisplayRgrid()

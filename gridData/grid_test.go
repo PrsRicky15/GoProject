@@ -1,7 +1,6 @@
 package gridData
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -62,10 +61,17 @@ func TestNewRGridFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if grid.rMin != -3. {
+		t.Errorf("expected tMin = %v, got %v", -3, grid.rMin)
+	}
+	if grid.rMax != 3 {
+		t.Errorf("expected tMax = %v, got %v", 3, grid.rMax)
+	}
+	if grid.nPoints != 18 {
+		t.Errorf("expected nPoints = %v, got %v", 18, grid.nPoints)
+	}
 
 	grid.DisplayInfo()
-	fmt.Println("kGrid points:")
-	grid.DisplayRgrid()
 }
 
 func TestNewTGridFromFile(t *testing.T) {
@@ -83,4 +89,6 @@ func TestNewTGridFromFile(t *testing.T) {
 	if grid.nPoints != 1000 {
 		t.Errorf("expected nPoints = %v, got %v", 1000, grid.nPoints)
 	}
+
+	grid.DisplayInfo()
 }

@@ -192,10 +192,13 @@ func (g *RadGrid) String() string {
 }
 
 func (g *RadGrid) DisplayInfo() {
-	fmt.Printf("Real Space - Min: %.6g, Max: %.6g, Dr: %.6g\n", g.RMin(), g.RMax(), g.DeltaR())
-	fmt.Printf("K Space    - Min: %.6g, Max: %.6g, Dk: %.6g\n", g.KMin(), g.KMax(), g.DeltaK())
-	fmt.Printf("Grid       - Length: %.6g, Points: %d, Cutoff Energy: %.6g\n",
+	fmt.Println("#-------------------------------------------------------------")
+	fmt.Println("# Real-Space-grid parameters:")
+	fmt.Printf("Real Space - Min:    %8.4g | Max: %8.4g | Dr: %8.4g\n", g.RMin(), g.RMax(), g.DeltaR())
+	fmt.Printf("K Space    - Min:    %8.4g | Max: %8.4g | Dk: %8.4g\n", g.KMin(), g.KMax(), g.DeltaK())
+	fmt.Printf("Grid       - Length: %8.4g | Points: %5d | Cutoff Energy: %8.4g\n",
 		g.Length(), g.NPoints(), g.CutoffE())
+	fmt.Println("#-------------------------------------------------------------")
 }
 
 func (g *RadGrid) DisplayRgrid()                               { displayGrid(g.RValues) }
@@ -204,6 +207,32 @@ func (g *RadGrid) PotentialAt(pot Evaluate, x float64) float64 { return pot.Eval
 func (g *RadGrid) ForceAt(pot Evaluate, x float64) float64     { return pot.ForceAt(x) }
 func (g *RadGrid) PotentialOnGrid(pot Evaluate) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
 func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.ForceOnGrid(g.RValues()) }
+
+func (g *RadGrid) PrintToFile(Pot Evaluate, filename string, format string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	_, err = fmt.Fprintf(file, "#\t\t x\t\t f(x)\n")
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	for i := uint32(0); i < g.NPoints(); i++ {
+		var x = g.rMin + float64(i)*g.gridData.deltaS
+		_, err := fmt.Fprintf(file, fullFormat, x, g.PotentialAt(Pot, x))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // TimeGrid represents a time-grid definition for time-dependent differential equation solver
 type TimeGrid struct {
@@ -328,7 +357,10 @@ func (t *TimeGrid) String() string {
 }
 
 func (t *TimeGrid) DisplayInfo() {
-	fmt.Printf("Real Time - Min: %.6g, Max: %.6g, Dr: %.6g\n", t.TMin(), t.TMax(), t.DeltaT())
-	fmt.Printf("w Space    - Min: %.6g, Max: %.6g, Dw: %.6g\n", t.OmegaMin(), t.OmegaMax(), t.DOmega())
-	fmt.Printf("Grid       - Length: %.6g, Points: %d\n", t.Length(), t.NPoints())
+	fmt.Println("#-------------------------------------------------------------")
+	fmt.Println("# Time-grid parameters:")
+	fmt.Printf("Real Time  - Min:    %8.4g | Max: %8.4g | Dr: %8.4g\n", t.TMin(), t.TMax(), t.DeltaT())
+	fmt.Printf("w Space    - Min:    %8.4g | Max: %8.4g | Dw: %8.4g\n", t.OmegaMin(), t.OmegaMax(), t.DOmega())
+	fmt.Printf("Grid       - Length: %8.4g | Points: %d\n", t.Length(), t.NPoints())
+	fmt.Println("#-------------------------------------------------------------")
 }
