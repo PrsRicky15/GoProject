@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// functionToFile print function on a grid to a File
 func functionToFile(g getGridData, Pot Evaluate, filename string, format string,
 	f func(evaluate Evaluate, x float64) float64) error {
 	file, err := os.Create(filename)

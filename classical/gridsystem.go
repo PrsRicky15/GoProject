@@ -1,4 +1,6 @@
-package gridData
+package classical
+
+import "GoProject/gridData"
 
 type SystemInfo struct {
 	position float64
@@ -10,11 +12,11 @@ type SystemInfo struct {
 type ModelSystem struct {
 	state SystemInfo
 	mass  float64
-	rgrid RadGrid
-	tgrid TimeGrid
+	rgrid gridData.RadGrid
+	tgrid gridData.TimeGrid
 }
 
-func NewModelSystem(state SystemInfo, mass float64, rgrid RadGrid, tgrid TimeGrid) *ModelSystem {
+func NewModelSystem(state SystemInfo, mass float64, rgrid gridData.RadGrid, tgrid gridData.TimeGrid) *ModelSystem {
 	return &ModelSystem{
 		state: state,
 		mass:  mass,
