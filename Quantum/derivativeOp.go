@@ -15,13 +15,6 @@ type Number interface {
 	constraints.Signed | constraints.Float
 }
 
-func Abs[T Number](x T) T {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 type EvaluateOp interface {
 	Evaluate() mat.Matrix
 	CanonicalEvaluate(At float64) mat.Matrix
@@ -68,25 +61,34 @@ type KeDVR struct {
 	mass float64
 }
 
-func (k *KeDVR) CanonicalEvaluate(At float64) mat.Matrix {
+func (k *KeDVR) CanonicalEvaluate(float64) mat.Matrix {
 	//TODO implement me
 	panic("implement me")
 }
 
 func (k *KeDVR) Evaluate() mat.Matrix {
-	ngrid := int(k.grid.NPoints())
+	dim := int(k.grid.NPoints())
 	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
-	diagTerm := math.Pow(math.Pi, 2) / (6. * dx2 * k.mass)
+	massDx2 := k.mass * dx2
+	diagTerm := math.Pi * math.Pi / (6. * massDx2)
+	invMassDx2 := 1.0 / massDx2
 
-	val := mat.NewDense(ngrid, ngrid, nil)
-	for i := 0; i < int(k.grid.NPoints()); i++ {
+	val := mat.NewDense(dim, dim, nil)
+
+	for i := 0; i < dim; i++ {
 		val.Set(i, i, diagTerm)
-		for j := 0; j < i-1; j++ {
-			val.Set(i, j)
-			val.Set(j, i, keT[Abs(i-j)])
-		}
 	}
 
+	for i := 1; i < dim; i++ {
+		for j := 0; j < i; j++ {
+			diff := i - j
+			sign := float64(1 - 2*(diff&1))
+			diffSq := float64(diff * diff)
+			kEval := sign * invMassDx2 / diffSq
+			val.Set(i, j, kEval)
+			val.Set(j, i, kEval)
+		}
+	}
 	return val
 }
 
