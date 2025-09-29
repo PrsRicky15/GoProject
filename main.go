@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GoProject/gridData"
+	"PrsGoProject/gridData"
 	"fmt"
 	"os"
 )
@@ -28,10 +28,4 @@ func main() {
 	grid.DisplayInfo()
 	fmt.Println("kGrid points:")
 	grid.DisplayRgrid()
-	cards := newDeck()
-
-	fmt.Println("")
-	fmt.Println("Test card deck:")
-	hand, _ := deal(cards, 5)
-	hand.print()
 }
