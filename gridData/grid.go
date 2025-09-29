@@ -9,7 +9,8 @@ import (
 	"strings"
 )
 
-func functionToFile(g getGridData, Pot Evaluate, filename string, format string, f func(evaluate Evaluate, x float64) float64) error {
+func functionToFile(g getGridData, Pot Evaluate, filename string, format string,
+	f func(evaluate Evaluate, x float64) float64) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
