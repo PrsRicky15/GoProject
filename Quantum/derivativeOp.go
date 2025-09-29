@@ -1,6 +1,7 @@
 package Quantum
 
 import (
+	"GoProject/gridData"
 	"fmt"
 
 	"math"
@@ -8,8 +9,6 @@ import (
 	"golang.org/x/exp/constraints"
 
 	"gonum.org/v1/gonum/mat"
-
-	"GoProject/gridData"
 )
 
 type Number interface {
@@ -74,25 +73,16 @@ func (k *KeDVR) CanonicalEvaluate(At float64) mat.Matrix {
 	panic("implement me")
 }
 
-func keToeplitz(dim int, dx2 float64) []float64 {
-	vals := make([]float64, dim)
-	for i := 0; i < dim; i++ {
-		vals[i] =
-	}
-	return vals
-}
-
 func (k *KeDVR) Evaluate() mat.Matrix {
 	ngrid := int(k.grid.NPoints())
 	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
 	diagTerm := math.Pow(math.Pi, 2) / (6. * dx2 * k.mass)
 
-	keT := keToeplitz(ngrid, dx2)
 	val := mat.NewDense(ngrid, ngrid, nil)
 	for i := 0; i < int(k.grid.NPoints()); i++ {
 		val.Set(i, i, diagTerm)
 		for j := 0; j < i-1; j++ {
-			val.Set(i, j, keT[Abs(i-j)])
+			val.Set(i, j)
 			val.Set(j, i, keT[Abs(i-j)])
 		}
 	}

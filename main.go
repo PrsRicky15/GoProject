@@ -1,7 +1,7 @@
 package main
 
 import (
-	"PrsGoProject/gridData"
+	"GoProject/gridData"
 	"fmt"
 	"os"
 )
