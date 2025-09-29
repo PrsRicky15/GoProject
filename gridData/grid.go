@@ -9,6 +9,32 @@ import (
 	"strings"
 )
 
+func functionToFile(g getGridData, Pot Evaluate, filename string, format string, f func(evaluate Evaluate, x float64) float64) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	_, err = fmt.Fprintf(file, "#\t\t x\t\t f(x)\n")
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	for i := uint32(0); i < g.getNgrid(); i++ {
+		var x = g.getMin() + float64(i)*g.getdS()
+		_, err := fmt.Fprintf(file, fullFormat, x, f(Pot, x))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // setGrid Setup some parameters for time- and space- grid
 type setGrid struct {
 	length  float64
@@ -208,30 +234,14 @@ func (g *RadGrid) ForceAt(pot Evaluate, x float64) float64     { return pot.Forc
 func (g *RadGrid) PotentialOnGrid(pot Evaluate) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
 func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.ForceOnGrid(g.RValues()) }
 
-func (g *RadGrid) PrintToFile(Pot Evaluate, filename string, format string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
+func (g *RadGrid) PrintPotentToFile(Pot Evaluate, filename string, format string) error {
+	err := functionToFile(g, Pot, filename, format, g.PotentialAt)
+	return err
+}
 
-		}
-	}(file)
-
-	fullFormat := "%14.7e" + "\t" + format + "\n"
-	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
-	_, err = fmt.Fprintf(file, "#\t\t x\t\t f(x)\n")
-	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
-	for i := uint32(0); i < g.NPoints(); i++ {
-		var x = g.rMin + float64(i)*g.gridData.deltaS
-		_, err := fmt.Fprintf(file, fullFormat, x, g.PotentialAt(Pot, x))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (g *RadGrid) PrintForceToFile(Pot Evaluate, filename string, format string) error {
+	err := functionToFile(g, Pot, filename, format, g.ForceAt)
+	return err
 }
 
 // TimeGrid represents a time-grid definition for time-dependent differential equation solver

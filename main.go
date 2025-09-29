@@ -20,7 +20,8 @@ func main() {
 
 	potent := gridData.SoftCore{Charge: 1., SoftParam: 0.5}
 	grid, _ := gridData.NewRGridFromFile(filePath)
-	err := grid.PrintToFile(potent, "softcore.dat", "%21.14e")
+	err := grid.PrintPotentToFile(potent, "softcore.dat", "%21.14e")
+	err = grid.PrintForceToFile(potent, "forceSoftcore.dat", "%21.14e")
 	if err != nil {
 		return
 	}
