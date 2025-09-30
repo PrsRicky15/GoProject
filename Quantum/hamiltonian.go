@@ -14,12 +14,12 @@ type HamiltonianOp struct {
 	hmat *mat.Dense
 }
 
-func NewHamil(grid *gridData.RadGrid, mass float64, Pot *gridData.PotentialOp) *HamiltonianOp {
+func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp) *HamiltonianOp {
 	kinE := NewKeDVR(grid, mass)
 	return &HamiltonianOp{
 		grid: grid,
 		kinE: kinE,
-		potE: Pot,
+		potE: &Pot,
 	}
 }
 
