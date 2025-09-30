@@ -10,8 +10,8 @@ import (
 )
 
 // functionToFile print function on a grid to a File
-func functionToFile(g getGridData, Pot Evaluate, filename string, format string,
-	f func(evaluate Evaluate, x float64) float64) error {
+func functionToFile(g getGridData, Pot PotentialOp, filename string, format string,
+	f func(evaluate PotentialOp, x float64) float64) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -229,19 +229,19 @@ func (g *RadGrid) DisplayInfo() {
 	fmt.Println("#-------------------------------------------------------------")
 }
 
-func (g *RadGrid) DisplayRgrid()                               { displayGrid(g.RValues) }
-func (g *RadGrid) DisplayKgrid()                               { displayGrid(g.KValues) }
-func (g *RadGrid) PotentialAt(pot Evaluate, x float64) float64 { return pot.EvaluateAt(x) }
-func (g *RadGrid) ForceAt(pot Evaluate, x float64) float64     { return pot.ForceAt(x) }
-func (g *RadGrid) PotentialOnGrid(pot Evaluate) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
-func (g *RadGrid) ForceOnGrid(pot Evaluate) []float64          { return pot.ForceOnGrid(g.RValues()) }
+func (g *RadGrid) DisplayRgrid()                                  { displayGrid(g.RValues) }
+func (g *RadGrid) DisplayKgrid()                                  { displayGrid(g.KValues) }
+func (g *RadGrid) PotentialAt(pot PotentialOp, x float64) float64 { return pot.EvaluateAt(x) }
+func (g *RadGrid) ForceAt(pot PotentialOp, x float64) float64     { return pot.ForceAt(x) }
+func (g *RadGrid) PotentialOnGrid(pot PotentialOp) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
+func (g *RadGrid) ForceOnGrid(pot PotentialOp) []float64          { return pot.ForceOnGrid(g.RValues()) }
 
-func (g *RadGrid) PrintPotentToFile(Pot Evaluate, filename string, format string) error {
+func (g *RadGrid) PrintPotentToFile(Pot PotentialOp, filename string, format string) error {
 	err := functionToFile(g, Pot, filename, format, g.PotentialAt)
 	return err
 }
 
-func (g *RadGrid) PrintForceToFile(Pot Evaluate, filename string, format string) error {
+func (g *RadGrid) PrintForceToFile(Pot PotentialOp, filename string, format string) error {
 	err := functionToFile(g, Pot, filename, format, g.ForceAt)
 	return err
 }

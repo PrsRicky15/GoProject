@@ -2,8 +2,8 @@ package gridData
 
 import "math"
 
-// Evaluate General interface for the evaluating the potential on a grid
-type Evaluate interface {
+// PotentialOp General interface for the evaluating the potential on a grid
+type PotentialOp interface {
 	ForceAt(x float64) float64
 	EvaluateAt(x float64) float64
 	EvaluateOnGrid(x []float64) []float64
@@ -18,7 +18,7 @@ func onGrid(f func(float64) float64, x []float64) []float64 {
 	return results
 }
 
-// SoftCore Potential
+// SoftCore PotentialOp
 type SoftCore struct {
 	Charge    float64
 	Centre    float64
@@ -38,7 +38,7 @@ func (sc SoftCore) ForceAt(x float64) float64 {
 func (sc SoftCore) ForceOnGrid(x []float64) []float64    { return onGrid(sc.EvaluateAt, x) }
 func (sc SoftCore) EvaluateOnGrid(x []float64) []float64 { return onGrid(sc.ForceAt, x) }
 
-// Gaussian Potential
+// Gaussian PotentialOp
 type Gaussian struct {
 	Cen      float64
 	Sigma    float64
@@ -63,7 +63,7 @@ func (g Gaussian) ForceAt(x float64) float64 {
 func (g Gaussian) ForceOnGrid(x []float64) []float64    { return onGrid(g.EvaluateAt, x) }
 func (g Gaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(g.ForceAt, x) }
 
-// MultiGaussian Potential
+// MultiGaussian PotentialOp
 type MultiGaussian struct {
 	Sigma    float64
 	Strength float64

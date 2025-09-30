@@ -2,7 +2,8 @@ package Quantum
 
 import (
 	"GoProject/gridData"
-	"fmt"
+
+	"GoProject/matrix"
 
 	"math"
 
@@ -15,65 +16,29 @@ type Number interface {
 	constraints.Signed | constraints.Float
 }
 
-type EvaluateOp interface {
-	Evaluate() mat.Matrix
-	CanonicalEvaluate(At float64) mat.Matrix
-	Diagonalize() ([]float64, *mat.Dense, error)
-}
-
-type MomentumOp interface {
-	EvaluateOp
-}
-
-type KineticOp interface {
-	EvaluateOp
-}
-
-func MatrixDiagonalize(Op EvaluateOp, n int) ([]float64, *mat.Dense, error) {
-	matrix := Op.Evaluate()
-
-	sym, ok := matrix.(*mat.SymDense)
-	if !ok {
-		sym = mat.NewSymDense(n, nil)
-		for i := 0; i < n; i++ {
-			for j := i; j < n; j++ {
-				sym.SetSym(i, j, matrix.At(i, j))
-			}
-		}
-	}
-
-	var eig mat.EigenSym
-	if ok := eig.Factorize(sym, true); !ok {
-		return nil, nil, fmt.Errorf("failed to compute eigenvalues and eigenvectors")
-	}
-
-	eigenvalues := make([]float64, n)
-	eig.Values(eigenvalues)
-
-	eigenvectors := mat.NewDense(n, n, nil)
-	eig.VectorsTo(eigenvectors)
-
-	return eigenvalues, eigenvectors, nil
-}
-
-type KeDVR struct {
+type MomDvrBasis struct {
 	grid *gridData.RadGrid
 	mass float64
 }
 
-func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDVR {
-	return &KeDVR{
+type KeDvrBasis struct {
+	grid *gridData.RadGrid
+	mass float64
+}
+
+func (k *KeDvrBasis) CanonicalOpEvaluate(At float64) mat.Matrix {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
+	return &KeDvrBasis{
 		grid: grid,
 		mass: mass,
 	}
 }
 
-func (k *KeDVR) CanonicalEvaluate(float64) mat.Matrix {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (k *KeDVR) Evaluate() mat.Matrix {
+func (k *KeDvrBasis) Evaluate() mat.Matrix {
 	dim := int(k.grid.NPoints())
 	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
 	massDx2 := k.mass * dx2
@@ -99,6 +64,6 @@ func (k *KeDVR) Evaluate() mat.Matrix {
 	return val
 }
 
-func (k *KeDVR) Diagonalize() ([]float64, *mat.Dense, error) {
-	return MatrixDiagonalize(k, int(k.grid.NPoints()))
+func (k *KeDvrBasis) Diagonalize() ([]float64, *mat.Dense, error) {
+	return matrix.RealDiagonalize(k, int(k.grid.NPoints()))
 }
