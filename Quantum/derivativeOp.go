@@ -24,11 +24,7 @@ type MomDvrBasis struct {
 type KeDvrBasis struct {
 	grid *gridData.RadGrid
 	mass float64
-}
-
-func (k *KeDvrBasis) CanonicalOpEvaluate(At float64) mat.Matrix {
-	//TODO implement me
-	panic("implement me")
+	kMat *mat.Dense
 }
 
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
@@ -36,6 +32,36 @@ func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
 		grid: grid,
 		mass: mass,
 	}
+}
+
+func (k *KeDvrBasis) Mat() {
+	dim := int(k.grid.NPoints())
+	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
+	massDx2 := k.mass * dx2
+	diagTerm := math.Pi * math.Pi / (6. * massDx2)
+	invMassDx2 := 1.0 / massDx2
+
+	k.kMat = mat.NewDense(dim, dim, nil)
+
+	for i := 0; i < dim; i++ {
+		k.kMat.Set(i, i, diagTerm)
+	}
+
+	for i := 1; i < dim; i++ {
+		for j := 0; j < i; j++ {
+			diff := i - j
+			sign := float64(1 - 2*(diff&1))
+			diffSq := float64(diff * diff)
+			kEval := sign * invMassDx2 / diffSq
+			k.kMat.Set(i, j, kEval)
+			k.kMat.Set(j, i, kEval)
+		}
+	}
+}
+
+func (k *KeDvrBasis) CanonicalOpEvaluate(At float64) mat.Matrix {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (k *KeDvrBasis) Evaluate() mat.Matrix {

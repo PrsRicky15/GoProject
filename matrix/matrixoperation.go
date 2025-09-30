@@ -11,6 +11,7 @@ type CanonicalOp interface {
 }
 
 type EvaluateOp interface {
+	Mat()
 	Evaluate() mat.Matrix
 	Diagonalize() ([]float64, *mat.Dense, error)
 }
