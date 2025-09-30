@@ -31,7 +31,7 @@ func (k *KeDvrBasis) CanMat() {
 	//TODO implement me
 	panic("implement me")
 }
-func (k *KeDvrBasis) CanEvaluate(At float64) mat.Matrix {
+func (k *KeDvrBasis) CanEvaluate(float64) mat.Matrix {
 	//TODO implement me
 	panic("implement me")
 }
@@ -68,7 +68,7 @@ func (k *KeDvrBasis) Mat() {
 	}
 }
 
-func (k *KeDvrBasis) CanonicalOpEvaluate(At float64) mat.Matrix {
+func (k *KeDvrBasis) CanonicalOpEvaluate() mat.Matrix {
 	//TODO implement me
 	panic("implement me")
 }
