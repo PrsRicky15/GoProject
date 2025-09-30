@@ -27,6 +27,15 @@ type KeDvrBasis struct {
 	kMat *mat.Dense
 }
 
+func (k *KeDvrBasis) CanMat() {
+	//TODO implement me
+	panic("implement me")
+}
+func (k *KeDvrBasis) CanEvaluate(At float64) mat.Matrix {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
 	return &KeDvrBasis{
 		grid: grid,

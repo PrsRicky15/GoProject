@@ -7,7 +7,8 @@ import (
 )
 
 type CanonicalOp interface {
-	CanonicalOpEvaluate(At float64) mat.Matrix
+	CanMat()
+	CanEvaluate(At float64) mat.Matrix
 }
 
 type EvaluateOp interface {

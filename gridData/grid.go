@@ -37,6 +37,30 @@ func functionToFile(g getGridData, Pot PotentialOp, filename string, format stri
 	return nil
 }
 
+func vectorToFile(g getGridData, vec []float64, filename string, format string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+		}
+	}(file)
+
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	_, err = fmt.Fprintf(file, "#\t\t x\t\t f(x)\n")
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	for i := uint32(0); i < g.getNgrid(); i++ {
+		x := g.getMin() + float64(i)*g.getdS()
+		if _, err := fmt.Fprintf(file, fullFormat, x, vec[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // setGrid Setup some parameters for time- and space- grid
 type setGrid struct {
 	length  float64
@@ -238,6 +262,11 @@ func (g *RadGrid) ForceOnGrid(pot PotentialOp) []float64          { return pot.F
 
 func (g *RadGrid) PrintPotentToFile(Pot PotentialOp, filename string, format string) error {
 	err := functionToFile(g, Pot, filename, format, g.PotentialAt)
+	return err
+}
+
+func (g *RadGrid) PrintVectorToFile(vec *[]float64, filename string, format string) error {
+	err := vectorToFile(g, *vec, filename, format)
 	return err
 }
 
