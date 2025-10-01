@@ -283,8 +283,8 @@ func (g *RadGrid) PrintVectorToFile(vec []float64, filename string, format strin
 }
 
 func (g *RadGrid) String() string {
-	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaR: %.6g, length: %.6g}",
-		g.rMin, g.rMax, g.nPoints, g.gridData.deltaS, g.gridData.length)
+	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaK: %.6g, CutOffe: %.6g}",
+		g.rMin, g.rMax, g.nPoints, g.gridData.deltaCS, g.cutoffE)
 }
 
 func (g *RadGrid) DisplayInfo() {
@@ -415,8 +415,8 @@ func (t *TimeGrid) DisplayTimeGrid()   { displayGrid(t.TValues) }
 func (t *TimeGrid) DisplayOmegaGrid()  { displayGrid(t.WValues) }
 
 func (t *TimeGrid) String() string {
-	return fmt.Sprintf("TimeGrid{tMin: %.6g, tMax: %.6g, nPoints: %d, deltaT: %.6g, length: %.6g}",
-		t.tMin, t.tMax, t.nPoints, t.gridData.deltaS, t.gridData.length)
+	return fmt.Sprintf("TGrid{Duration: %.6g, macroDT: %.6g, macroSteps: %d, microSteps: %.6v}",
+		t.tMax, t.macroDt, t.macroSteps, t.microSteps)
 }
 
 func (t *TimeGrid) DisplayInfo() {

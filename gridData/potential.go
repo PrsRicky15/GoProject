@@ -7,8 +7,6 @@ import (
 
 // PotentialOp General interface for the evaluating the potential on a grid
 type PotentialOp interface {
-	display()
-	toString() string
 	evaluateAt(x float64) float64
 	evaluateOnGrid(x []float64) []float64
 	forceAt(x float64) float64
@@ -31,10 +29,10 @@ type SoftCore struct {
 	SoftParam float64
 }
 
-func (sc SoftCore) toString() string {
+func (sc SoftCore) String() string {
 	return fmt.Sprintf("%g/Sqrt((x - %g)^2 + %g)", sc.Charge, sc.Centre, sc.SoftParam*sc.SoftParam)
 }
-func (sc SoftCore) display() { sc.toString() }
+
 func (sc SoftCore) saveToFile() error {
 	//TODO implement me
 	panic("implement me")
@@ -60,12 +58,10 @@ type Gaussian struct {
 	Strength float64
 }
 
-func (g Gaussian) toString() string {
+func (g Gaussian) String() string {
 	return fmt.Sprintf("v0 Exp((x - x0)^2/(2 Sigma^2)),"+
 		" Where v0 = %g, x0 = %v, sigma = %g", g.Strength, g.Cen, g.Sigma)
 }
-
-func (g Gaussian) display() { fmt.Println(g.toString()) }
 
 func (g Gaussian) saveToFile() error {
 	//TODO implement me
@@ -98,13 +94,12 @@ type MultiGaussian struct {
 	Gap      float64
 }
 
-func (mg MultiGaussian) toString() string {
+func (mg MultiGaussian) String() string {
 	return fmt.Sprintf("v0 Sum_i Exp((x - i L)^2/(2 Sigma^2)),"+
 		" Where v0 = %g, i = %v, sigma = %g, L = %g", mg.Strength,
 		mg.NumGauss, mg.Sigma, mg.Gap)
 }
 
-func (mg MultiGaussian) display() { fmt.Println(mg.toString()) }
 func (mg MultiGaussian) saveToFile() error {
 	//TODO implement me
 	panic("implement me")
@@ -167,10 +162,10 @@ type SuperGaussian struct {
 	Order    uint8
 }
 
-func (sg SuperGaussian) toString() string {
+func (sg SuperGaussian) String() string {
 	return fmt.Sprintf("%g Exp[ ((x - %g)/ %g)^%v]", sg.Strength, sg.Cen, sg.Sigma, sg.Order)
 }
-func (sg SuperGaussian) display() { fmt.Println(sg.toString()) }
+
 func (sg SuperGaussian) saveToFile() error {
 	//TODO implement me
 	panic("implement me")
@@ -197,8 +192,7 @@ type Harmonic struct {
 	ForceConst float64
 }
 
-func (h Harmonic) toString() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
-func (h Harmonic) display()         { fmt.Println(h.toString()) }
+func (h Harmonic) String() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
 func (h Harmonic) saveToFile() error {
 	//TODO implement me
 	panic("implement me")
@@ -214,7 +208,7 @@ type Polynomial struct {
 	Coeffs []float64
 }
 
-func (p Polynomial) toString() string {
+func (p Polynomial) String() string {
 	if len(p.Coeffs) == 0 {
 		return "0"
 	}
@@ -259,7 +253,6 @@ func (p Polynomial) toString() string {
 	return result
 }
 
-func (p Polynomial) display() { fmt.Println(p.toString()) }
 func (p Polynomial) saveToFile() error {
 	//TODO implement me
 	panic("implement me")
@@ -292,10 +285,10 @@ type Morse struct {
 	Cen   float64
 }
 
-func (m Morse) toString() string {
+func (m Morse) String() string {
 	return fmt.Sprintf(" %g [1 - Exp(%g(x - %g))]^2", m.De, m.Alpha, m.Cen)
 }
-func (m Morse) display() { fmt.Println(m.toString()) }
+
 func (m Morse) evaluateAt(x float64) float64 {
 	return m.De * math.Pow(1.-math.Exp(-m.Alpha*(x-m.Cen)), 2)
 }
