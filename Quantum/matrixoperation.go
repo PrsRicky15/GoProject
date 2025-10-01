@@ -6,8 +6,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func RealDiagonalize(Op EvaluateOp, n int) ([]float64, *mat.Dense, error) {
-	matrix := Op.Evaluate()
+func RealDiagonalize(Op *KeDvrBasis, n int) ([]float64, *mat.Dense, error) {
+	matrix := Op.GetMat()
 
 	sym, ok := matrix.(*mat.SymDense)
 	if !ok {

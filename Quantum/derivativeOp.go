@@ -13,25 +13,47 @@ type Number interface {
 	constraints.Signed | constraints.Float
 }
 
-type CanonicalOp interface {
-	CanMat()
-	CanEvaluate(At float64) mat.Matrix
-}
-
-type EvaluateOp interface {
+type MatrixOp interface {
 	Mat()
-	Evaluate() mat.Matrix
+	GetMat() mat.Matrix
 	Diagonalize() ([]float64, *mat.Dense, error)
 }
 
+type CanTimeSolverOp interface {
+	ExpDt(At float64, In []float64) []float64
+	ExpDtTo(At float64, In []float64, Out []float64)
+	ExpDtInPlace(At float64, InOut []float64)
+}
+
+type TimeSolverOp interface {
+	ExpDt(In []float64) []float64
+	ExpDtTo(In []float64, Out []float64)
+	ExpDtInPlace(InOut []float64)
+}
+
 type MomentumOp interface {
-	CanonicalOp
-	EvaluateOp
+	MatrixOp
+	TimeSolverOp
 }
 
 type KineticOp interface {
-	CanonicalOp
-	EvaluateOp
+	MatrixOp
+	TimeSolverOp
+}
+
+type CanMomentumOp interface {
+	MatrixOp
+	CanTimeSolverOp
+}
+
+type CanKineticOp interface {
+	MatrixOp
+	CanTimeSolverOp
+}
+
+type CanonicalMomDvrBasis struct {
+	grid *gridData.RadGrid
+	mass float64
 }
 
 type MomDvrBasis struct {
@@ -39,19 +61,16 @@ type MomDvrBasis struct {
 	mass float64
 }
 
-type KeDvrBasis struct {
+type CanonicalKeDvrBasis struct {
 	grid *gridData.RadGrid
 	mass float64
 	kMat *mat.Dense
 }
 
-func (k *KeDvrBasis) CanMat() {
-	//TODO implement me
-	panic("implement me")
-}
-func (k *KeDvrBasis) CanEvaluate(float64) mat.Matrix {
-	//TODO implement me
-	panic("implement me")
+type KeDvrBasis struct {
+	grid *gridData.RadGrid
+	mass float64
+	kMat *mat.Dense
 }
 
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
@@ -86,37 +105,22 @@ func (k *KeDvrBasis) Mat() {
 	}
 }
 
-func (k *KeDvrBasis) CanonicalOpEvaluate() mat.Matrix {
+func (k *KeDvrBasis) GetMat() mat.Matrix { return k.kMat }
+func (k *KeDvrBasis) Diagonalize() ([]float64, *mat.Dense, error) {
+	return RealDiagonalize(k, int(k.grid.NPoints()))
+}
+
+func (k *KeDvrBasis) ExpDt(In []float64) []float64 {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *KeDvrBasis) Evaluate() mat.Matrix {
-	dim := int(k.grid.NPoints())
-	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
-	massDx2 := k.mass * dx2
-	diagTerm := math.Pi * math.Pi / (6. * massDx2)
-	invMassDx2 := 1.0 / massDx2
-
-	val := mat.NewDense(dim, dim, nil)
-
-	for i := 0; i < dim; i++ {
-		val.Set(i, i, diagTerm)
-	}
-
-	for i := 1; i < dim; i++ {
-		for j := 0; j < i; j++ {
-			diff := i - j
-			sign := float64(1 - 2*(diff&1))
-			diffSq := float64(diff * diff)
-			kEval := sign * invMassDx2 / diffSq
-			val.Set(i, j, kEval)
-			val.Set(j, i, kEval)
-		}
-	}
-	return val
+func (k *KeDvrBasis) ExpDtTo(In []float64, Out []float64) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (k *KeDvrBasis) Diagonalize() ([]float64, *mat.Dense, error) {
-	return RealDiagonalize(k, int(k.grid.NPoints()))
+func (k *KeDvrBasis) ExpDtInPlace(InOut []float64) {
+	//TODO implement me
+	panic("implement me")
 }

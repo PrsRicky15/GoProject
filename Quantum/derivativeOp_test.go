@@ -11,7 +11,7 @@ func TestKeDVR_Evaluate(t *testing.T) {
 		panic(err)
 	}
 	kinE := NewKeDVR(rgrid, 1.)
-	kinE.Evaluate()
+	kinE.Mat()
 }
 
 func TestHamiltonianOp(t *testing.T) {

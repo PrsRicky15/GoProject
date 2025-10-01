@@ -256,10 +256,10 @@ func (g *RadGrid) KMax() float64                                  { return g.gri
 func (g *RadGrid) CutoffE() float64                               { return g.cutoffE }
 func (g *RadGrid) DisplayRGrid()                                  { displayGrid(g.RValues) }
 func (g *RadGrid) DisplayKGrid()                                  { displayGrid(g.KValues) }
-func (g *RadGrid) PotentialAt(pot PotentialOp, x float64) float64 { return pot.EvaluateAt(x) }
-func (g *RadGrid) ForceAt(pot PotentialOp, x float64) float64     { return pot.ForceAt(x) }
-func (g *RadGrid) PotentialOnGrid(pot PotentialOp) []float64      { return pot.EvaluateOnGrid(g.RValues()) }
-func (g *RadGrid) ForceOnGrid(pot PotentialOp) []float64          { return pot.ForceOnGrid(g.RValues()) }
+func (g *RadGrid) PotentialAt(pot PotentialOp, x float64) float64 { return pot.evaluateAt(x) }
+func (g *RadGrid) ForceAt(pot PotentialOp, x float64) float64     { return pot.forceAt(x) }
+func (g *RadGrid) PotentialOnGrid(pot PotentialOp) []float64      { return pot.evaluateOnGrid(g.RValues()) }
+func (g *RadGrid) ForceOnGrid(pot PotentialOp) []float64          { return pot.forceOnGrid(g.RValues()) }
 func (g *RadGrid) DisplayPotential(Pot PotentialOp, format string) {
 	displayFunc(g, Pot, format, g.PotentialAt)
 }

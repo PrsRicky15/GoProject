@@ -1,13 +1,19 @@
 package gridData
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // PotentialOp General interface for the evaluating the potential on a grid
 type PotentialOp interface {
-	ForceAt(x float64) float64
-	EvaluateAt(x float64) float64
-	EvaluateOnGrid(x []float64) []float64
-	ForceOnGrid(x []float64) []float64
+	display()
+	toString() string
+	evaluateAt(x float64) float64
+	evaluateOnGrid(x []float64) []float64
+	forceAt(x float64) float64
+	forceOnGrid(x []float64) []float64
+	saveToFile() error
 }
 
 func onGrid(f func(float64) float64, x []float64) []float64 {
@@ -25,18 +31,27 @@ type SoftCore struct {
 	SoftParam float64
 }
 
-func (sc SoftCore) EvaluateAt(x float64) float64 {
+func (sc SoftCore) toString() string {
+	return fmt.Sprintf("%g/Sqrt((x - %g)^2 + %g)", sc.Charge, sc.Centre, sc.SoftParam*sc.SoftParam)
+}
+func (sc SoftCore) display() { sc.toString() }
+func (sc SoftCore) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (sc SoftCore) evaluateAt(x float64) float64 {
 	return sc.Charge / math.Sqrt(math.Pow(x-sc.Centre, 2)+math.Pow(sc.SoftParam, 2))
 }
 
-func (sc SoftCore) ForceAt(x float64) float64 {
+func (sc SoftCore) forceAt(x float64) float64 {
 	coef := sc.Charge * (x - sc.Centre)
 	val := (x-sc.Centre)*(x-sc.Centre) + sc.SoftParam*sc.SoftParam
 	return coef * math.Pow(val, -3./2.)
 }
 
-func (sc SoftCore) ForceOnGrid(x []float64) []float64    { return onGrid(sc.EvaluateAt, x) }
-func (sc SoftCore) EvaluateOnGrid(x []float64) []float64 { return onGrid(sc.ForceAt, x) }
+func (sc SoftCore) forceOnGrid(x []float64) []float64    { return onGrid(sc.evaluateAt, x) }
+func (sc SoftCore) evaluateOnGrid(x []float64) []float64 { return onGrid(sc.forceAt, x) }
 
 // Gaussian PotentialOp
 type Gaussian struct {
@@ -45,23 +60,35 @@ type Gaussian struct {
 	Strength float64
 }
 
+func (g Gaussian) toString() string {
+	return fmt.Sprintf("v0 Exp((x - x0)^2/(2 Sigma^2)),"+
+		" Where v0 = %g, x0 = %v, sigma = %g", g.Strength, g.Cen, g.Sigma)
+}
+
+func (g Gaussian) display() { fmt.Println(g.toString()) }
+
+func (g Gaussian) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func xbysigma(x float64, sigma float64) float64 {
 	return x / sigma
 }
 
-func (g Gaussian) EvaluateAt(x float64) float64 {
+func (g Gaussian) evaluateAt(x float64) float64 {
 	val := xbysigma(x-g.Cen, g.Sigma)
 	return g.Strength * math.Exp(-math.Pow(val, 2)/2)
 }
 
-func (g Gaussian) ForceAt(x float64) float64 {
+func (g Gaussian) forceAt(x float64) float64 {
 	expnt := xbysigma(x-g.Cen, g.Sigma)
 	val := -g.Strength * expnt / g.Sigma
 	return val * math.Exp(-math.Pow(expnt, 2)/2)
 }
 
-func (g Gaussian) ForceOnGrid(x []float64) []float64    { return onGrid(g.EvaluateAt, x) }
-func (g Gaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(g.ForceAt, x) }
+func (g Gaussian) forceOnGrid(x []float64) []float64    { return onGrid(g.evaluateAt, x) }
+func (g Gaussian) evaluateOnGrid(x []float64) []float64 { return onGrid(g.forceAt, x) }
 
 // MultiGaussian PotentialOp
 type MultiGaussian struct {
@@ -71,7 +98,19 @@ type MultiGaussian struct {
 	Gap      float64
 }
 
-func (mg MultiGaussian) EvaluateAt(x float64) float64 {
+func (mg MultiGaussian) toString() string {
+	return fmt.Sprintf("v0 Sum_i Exp((x - i L)^2/(2 Sigma^2)),"+
+		" Where v0 = %g, i = %v, sigma = %g, L = %g", mg.Strength,
+		mg.NumGauss, mg.Sigma, mg.Gap)
+}
+
+func (mg MultiGaussian) display() { fmt.Println(mg.toString()) }
+func (mg MultiGaussian) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mg MultiGaussian) evaluateAt(x float64) float64 {
 	if mg.NumGauss/2 == 0 {
 		val := 0.
 		for i := uint8(0); i < mg.NumGauss/2; i++ {
@@ -92,7 +131,7 @@ func (mg MultiGaussian) EvaluateAt(x float64) float64 {
 	return mg.Strength * val
 }
 
-func (mg MultiGaussian) ForceAt(x float64) float64 {
+func (mg MultiGaussian) forceAt(x float64) float64 {
 	if mg.NumGauss/2 == 0 {
 		val := 0.
 		for i := uint8(0); i < mg.NumGauss/2; i++ {
@@ -117,8 +156,8 @@ func (mg MultiGaussian) ForceAt(x float64) float64 {
 	return mg.Strength * val
 }
 
-func (mg MultiGaussian) ForceOnGrid(x []float64) []float64    { return onGrid(mg.EvaluateAt, x) }
-func (mg MultiGaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(mg.ForceAt, x) }
+func (mg MultiGaussian) forceOnGrid(x []float64) []float64    { return onGrid(mg.evaluateAt, x) }
+func (mg MultiGaussian) evaluateOnGrid(x []float64) []float64 { return onGrid(mg.forceAt, x) }
 
 // SuperGaussian v(x)= v0 exp(-(x/Sigma)^n)
 type SuperGaussian struct {
@@ -128,20 +167,29 @@ type SuperGaussian struct {
 	Order    uint8
 }
 
-func (sg SuperGaussian) EvaluateAt(x float64) float64 {
+func (sg SuperGaussian) toString() string {
+	return fmt.Sprintf("%g Exp[ ((x - %g)/ %g)^%v]", sg.Strength, sg.Cen, sg.Sigma, sg.Order)
+}
+func (sg SuperGaussian) display() { fmt.Println(sg.toString()) }
+func (sg SuperGaussian) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (sg SuperGaussian) evaluateAt(x float64) float64 {
 	val := xbysigma(x-sg.Cen, sg.Sigma)
 	return sg.Strength * math.Exp(-math.Pow(val, float64(sg.Order)))
 }
 
-func (sg SuperGaussian) ForceAt(x float64) float64 {
+func (sg SuperGaussian) forceAt(x float64) float64 {
 	forder := float64(sg.Order)
 	expnt := xbysigma(x-sg.Cen, sg.Sigma)
 	coeffs := -sg.Strength * forder / sg.Sigma * math.Pow(expnt, forder-1)
 	return coeffs * math.Exp(-math.Pow(expnt, forder))
 }
 
-func (sg SuperGaussian) ForceOnGrid(x []float64) []float64    { return onGrid(sg.EvaluateAt, x) }
-func (sg SuperGaussian) EvaluateOnGrid(x []float64) []float64 { return onGrid(sg.ForceAt, x) }
+func (sg SuperGaussian) forceOnGrid(x []float64) []float64    { return onGrid(sg.evaluateAt, x) }
+func (sg SuperGaussian) evaluateOnGrid(x []float64) []float64 { return onGrid(sg.forceAt, x) }
 
 // Harmonic v(x)= k/2 x^2
 type Harmonic struct {
@@ -149,17 +197,75 @@ type Harmonic struct {
 	ForceConst float64
 }
 
-func (h Harmonic) EvaluateAt(x float64) float64         { return h.ForceConst / 0.5 * math.Pow(x-h.Cen, 2) }
-func (h Harmonic) ForceAt(x float64) float64            { return -h.ForceConst * (x - h.Cen) }
-func (h Harmonic) EvaluateOnGrid(x []float64) []float64 { return onGrid(h.EvaluateAt, x) }
-func (h Harmonic) ForceOnGrid(x []float64) []float64    { return onGrid(h.ForceAt, x) }
+func (h Harmonic) toString() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
+func (h Harmonic) display()         { fmt.Println(h.toString()) }
+func (h Harmonic) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (h Harmonic) evaluateAt(x float64) float64         { return h.ForceConst / 0.5 * math.Pow(x-h.Cen, 2) }
+func (h Harmonic) forceAt(x float64) float64            { return -h.ForceConst * (x - h.Cen) }
+func (h Harmonic) evaluateOnGrid(x []float64) []float64 { return onGrid(h.evaluateAt, x) }
+func (h Harmonic) forceOnGrid(x []float64) []float64    { return onGrid(h.forceAt, x) }
 
 // Polynomial v(x)= Sum_i ci x^i
 type Polynomial struct {
 	Coeffs []float64
 }
 
-func (p Polynomial) EvaluateAt(x float64) float64 {
+func (p Polynomial) toString() string {
+	if len(p.Coeffs) == 0 {
+		return "0"
+	}
+
+	var result string
+
+	for i := len(p.Coeffs) - 1; i >= 0; i-- {
+		coeff := p.Coeffs[i]
+
+		if coeff == 0 {
+			continue
+		}
+
+		if result != "" {
+			if coeff > 0 {
+				result += " + "
+			} else {
+				result += " - "
+				coeff = -coeff
+			}
+		} else if coeff < 0 {
+			result += "-"
+			coeff = -coeff
+		}
+
+		if coeff != 1 || i == 0 {
+			result += fmt.Sprintf("%g", coeff)
+		}
+
+		if i > 0 {
+			result += "x"
+			if i > 1 {
+				result += fmt.Sprintf("^%d", i)
+			}
+		}
+	}
+
+	if result == "" {
+		return "0"
+	}
+
+	return result
+}
+
+func (p Polynomial) display() { fmt.Println(p.toString()) }
+func (p Polynomial) saveToFile() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p Polynomial) evaluateAt(x float64) float64 {
 	results := 0.0
 	for i := 0; i < len(p.Coeffs); i++ {
 		results += p.Coeffs[i] * math.Pow(x, float64(i))
@@ -167,7 +273,7 @@ func (p Polynomial) EvaluateAt(x float64) float64 {
 	return results
 }
 
-func (p Polynomial) ForceAt(x float64) float64 {
+func (p Polynomial) forceAt(x float64) float64 {
 	result := 0.0
 	for i := 1; i < len(p.Coeffs); i++ {
 		power := float64(i - 1)
@@ -176,8 +282,8 @@ func (p Polynomial) ForceAt(x float64) float64 {
 	return -result
 }
 
-func (p Polynomial) EvaluateOnGrid(x []float64) []float64 { return onGrid(p.EvaluateAt, x) }
-func (p Polynomial) ForceOnGrid(x []float64) []float64    { return onGrid(p.ForceAt, x) }
+func (p Polynomial) evaluateOnGrid(x []float64) []float64 { return onGrid(p.evaluateAt, x) }
+func (p Polynomial) forceOnGrid(x []float64) []float64    { return onGrid(p.forceAt, x) }
 
 // Morse v(r)= De (1 - Exp(-(r-re))^2
 type Morse struct {
@@ -186,15 +292,19 @@ type Morse struct {
 	Cen   float64
 }
 
-func (m Morse) EvaluateAt(x float64) float64 {
+func (m Morse) toString() string {
+	return fmt.Sprintf(" %g [1 - Exp(%g(x - %g))]^2", m.De, m.Alpha, m.Cen)
+}
+func (m Morse) display() { fmt.Println(m.toString()) }
+func (m Morse) evaluateAt(x float64) float64 {
 	return m.De * math.Pow(1.-math.Exp(-m.Alpha*(x-m.Cen)), 2)
 }
 
-func (m Morse) ForceAt(x float64) float64 {
+func (m Morse) forceAt(x float64) float64 {
 	expterm := math.Exp(-m.Alpha * (x - m.Cen))
 	val := -2 * m.Alpha * m.De
 	return val * expterm * (1 - expterm)
 }
 
-func (m Morse) ForceOnGrid(x []float64) []float64    { return onGrid(m.EvaluateAt, x) }
-func (m Morse) EvaluateOnGrid(x []float64) []float64 { return onGrid(m.ForceAt, x) }
+func (m Morse) forceOnGrid(x []float64) []float64    { return onGrid(m.evaluateAt, x) }
+func (m Morse) evaluateOnGrid(x []float64) []float64 { return onGrid(m.forceAt, x) }
