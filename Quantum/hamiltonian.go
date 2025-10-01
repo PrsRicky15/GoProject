@@ -2,14 +2,13 @@ package Quantum
 
 import (
 	"GoProject/gridData"
-	"GoProject/matrix"
 
 	"gonum.org/v1/gonum/mat"
 )
 
 type HamiltonianOp struct {
 	grid *gridData.RadGrid
-	kinE matrix.KineticOp
+	kinE KineticOp
 	potE *gridData.PotentialOp
 	hmat *mat.Dense
 }
@@ -25,7 +24,7 @@ func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp) *H
 
 func (op *HamiltonianOp) Mat() {
 	vPot := op.grid.PotentialOnGrid(*op.potE)
-	err := op.grid.PrintVectorToFile(&vPot, "potent.dat", "%21.14e")
+	err := op.grid.PrintVectorToFile(vPot, "potent.dat", "%21.14e")
 	if err != nil {
 		return
 	}

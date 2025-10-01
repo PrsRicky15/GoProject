@@ -1,31 +1,10 @@
-package matrix
+package Quantum
 
 import (
 	"fmt"
 
 	"gonum.org/v1/gonum/mat"
 )
-
-type CanonicalOp interface {
-	CanMat()
-	CanEvaluate(At float64) mat.Matrix
-}
-
-type EvaluateOp interface {
-	Mat()
-	Evaluate() mat.Matrix
-	Diagonalize() ([]float64, *mat.Dense, error)
-}
-
-type MomentumOp interface {
-	CanonicalOp
-	EvaluateOp
-}
-
-type KineticOp interface {
-	CanonicalOp
-	EvaluateOp
-}
 
 func RealDiagonalize(Op EvaluateOp, n int) ([]float64, *mat.Dense, error) {
 	matrix := Op.Evaluate()

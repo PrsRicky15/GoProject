@@ -23,9 +23,6 @@ func main() {
 	err := grid.PrintPotentToFile(potent, "softcore.dat", "%21.14e")
 	err = grid.PrintForceToFile(potent, "forceSoftcore.dat", "%21.14e")
 	if err != nil {
-		return
+		panic(err)
 	}
-	grid.DisplayInfo()
-	fmt.Println("kGrid points:")
-	grid.DisplayRgrid()
 }

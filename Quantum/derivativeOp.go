@@ -2,9 +2,6 @@ package Quantum
 
 import (
 	"GoProject/gridData"
-
-	"GoProject/matrix"
-
 	"math"
 
 	"golang.org/x/exp/constraints"
@@ -14,6 +11,27 @@ import (
 
 type Number interface {
 	constraints.Signed | constraints.Float
+}
+
+type CanonicalOp interface {
+	CanMat()
+	CanEvaluate(At float64) mat.Matrix
+}
+
+type EvaluateOp interface {
+	Mat()
+	Evaluate() mat.Matrix
+	Diagonalize() ([]float64, *mat.Dense, error)
+}
+
+type MomentumOp interface {
+	CanonicalOp
+	EvaluateOp
+}
+
+type KineticOp interface {
+	CanonicalOp
+	EvaluateOp
 }
 
 type MomDvrBasis struct {
@@ -100,5 +118,5 @@ func (k *KeDvrBasis) Evaluate() mat.Matrix {
 }
 
 func (k *KeDvrBasis) Diagonalize() ([]float64, *mat.Dense, error) {
-	return matrix.RealDiagonalize(k, int(k.grid.NPoints()))
+	return RealDiagonalize(k, int(k.grid.NPoints()))
 }
