@@ -4,21 +4,17 @@ import (
 	"GoProject/gridData"
 	"math"
 
-	"golang.org/x/exp/constraints"
 	"gonum.org/v1/gonum/blas"
 	"gonum.org/v1/gonum/blas/cblas128"
 
 	"gonum.org/v1/gonum/mat"
 )
 
-type Number interface {
-	constraints.Signed | constraints.Float
-}
-
 type MatrixOp interface {
 	Mat()
-	GetMat() *mat.Dense
-	Diagonalize() ([]float64, *mat.Dense, error)
+	GetMat() mat.Matrix
+	GetCMat() mat.Matrix
+	Diagonalize() ([]float64, mat.Matrix, error)
 }
 
 type CanTimeSolverOp interface {
@@ -70,17 +66,22 @@ type MomDvrBasis struct {
 type CanonicalKeDvrBasis struct {
 	grid  *gridData.RadGrid
 	mass  float64
-	kMat  *mat.Dense
-	uMat  *mat.Dense
+	kMat  mat.Matrix
+	uMat  mat.Matrix
 	keVal []float64
 }
 
 type KeDvrBasis struct {
 	grid  *gridData.RadGrid
 	mass  float64
-	kMat  *mat.Dense
-	uMat  *mat.Dense
+	kMat  mat.Matrix
+	uMat  mat.Matrix
 	keVal []float64
+}
+
+func (k *KeDvrBasis) GetCMat() mat.Matrix {
+	//TODO implement me
+	panic("implement me")
 }
 
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
@@ -90,7 +91,7 @@ func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
 	}
 }
 
-func (k *KeDvrBasis) mInfinityToInfinity(keMat *mat.Dense) {
+func (k *KeDvrBasis) mInfinityToInfinity(keMat mat.Matrix) {
 	_, dim := keMat.Dims()
 	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
 	massDx2 := k.mass * dx2
@@ -100,7 +101,7 @@ func (k *KeDvrBasis) mInfinityToInfinity(keMat *mat.Dense) {
 	keMat = mat.NewDense(dim, dim, nil)
 
 	for i := 0; i < dim; i++ {
-		keMat.Set(i, i, diagTerm)
+		keMat.(*mat.Dense).Set(i, i, diagTerm)
 	}
 
 	for i := 1; i < dim; i++ {
@@ -109,13 +110,13 @@ func (k *KeDvrBasis) mInfinityToInfinity(keMat *mat.Dense) {
 			sign := float64(1 - 2*(diff&1))
 			diffSq := float64(diff * diff)
 			kEval := sign * invMassDx2 / diffSq
-			keMat.Set(i, j, kEval)
-			keMat.Set(j, i, kEval)
+			keMat.(*mat.Dense).Set(i, j, kEval)
+			keMat.(*mat.Dense).Set(j, i, kEval)
 		}
 	}
 }
 
-func (k *KeDvrBasis) zeroToInfinity(keMat *mat.Dense) {
+func (k *KeDvrBasis) zeroToInfinity(keMat mat.Matrix) {
 	_, dim := keMat.Dims()
 	dx2 := k.grid.DeltaR() * k.grid.DeltaR()
 	massDx2 := k.mass * dx2
@@ -123,7 +124,7 @@ func (k *KeDvrBasis) zeroToInfinity(keMat *mat.Dense) {
 	invMassDx2 := 1.0 / massDx2
 
 	for i := 0; i < dim; i++ {
-		keMat.Set(i, i, diagTerm-0.25/float64(i*i))
+		keMat.(*mat.Dense).Set(i, i, diagTerm-0.25/float64(i*i))
 	}
 
 	for i := 1; i < dim; i++ {
@@ -134,8 +135,8 @@ func (k *KeDvrBasis) zeroToInfinity(keMat *mat.Dense) {
 			diffSq := float64(diff * diff)
 			addSq := float64(add * add)
 			kEval := sign * invMassDx2 * (1./diffSq - 1./addSq)
-			keMat.Set(i, j, kEval)
-			keMat.Set(j, i, kEval)
+			keMat.(*mat.Dense).Set(i, j, kEval)
+			keMat.(*mat.Dense).Set(j, i, kEval)
 		}
 	}
 }
@@ -149,8 +150,11 @@ func (k *KeDvrBasis) Mat() {
 }
 
 func (k *KeDvrBasis) GetMat() mat.Matrix { return k.kMat }
-func (k *KeDvrBasis) Diagonalize() ([]float64, *mat.Dense, error) {
-	return RealDiagonalize(k, int(k.grid.NPoints()))
+func (k *KeDvrBasis) Diagonalize() ([]float64, mat.Matrix, error) {
+	vals := make([]float64, k.grid.NPoints())
+	vecs := mat.Matrix(mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil))
+	err := RealDiagonalizeLapack(k, vals, vecs)
+	return vals, vecs, err
 }
 
 func (k *KeDvrBasis) ExpDt(In []float64) []float64 {
@@ -200,7 +204,7 @@ func (k *KeDvrBasis) ExpIdt(In []complex128) []complex128 {
 }
 
 func (k *KeDvrBasis) ExpIdtTo(In []complex128, Out []complex128) {
-	expMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
+	expMat := mat.NewCDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
 
 	cblas128.Gemv(
 		blas.NoTrans,
