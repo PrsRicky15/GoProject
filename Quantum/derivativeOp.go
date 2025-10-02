@@ -28,9 +28,9 @@ type TimeSolverOp interface {
 	ExpDtTo(Dt float64, In []float64, Out []float64)
 	ExpDtInPlace(Dt float64, InOut []float64)
 
-	ExpIdt(Dt float64, In []complex64) []complex64
-	ExpIdtTo(Dt float64, In []complex64, Out []complex64)
-	ExpIdtInPlace(Dt float64, InOut []complex64)
+	ExpIdt(Dt float64, In []complex128) []complex128
+	ExpIdtTo(Dt float64, In []complex128, Out []complex128)
+	ExpIdtInPlace(Dt float64, InOut []complex128)
 }
 
 type MomentumOp interface {
@@ -79,15 +79,16 @@ type KeDvrBasis struct {
 	keVal []float64
 }
 
-func (k *KeDvrBasis) GetCMat() mat.Matrix {
-	//TODO implement me
-	panic("implement me")
-}
-
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
+	keMat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
+	uMat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
+	eval := make([]float64, int(grid.NPoints()))
 	return &KeDvrBasis{
-		grid: grid,
-		mass: mass,
+		grid:  grid,
+		mass:  mass,
+		kMat:  keMat,
+		uMat:  uMat,
+		keVal: eval,
 	}
 }
 
@@ -149,7 +150,9 @@ func (k *KeDvrBasis) Mat() {
 	}
 }
 
-func (k *KeDvrBasis) GetMat() mat.Matrix { return k.kMat }
+func (k *KeDvrBasis) GetMat() mat.Matrix  { return k.kMat }
+func (k *KeDvrBasis) GetCMat() mat.Matrix { return k.kMat }
+
 func (k *KeDvrBasis) Diagonalize() ([]float64, mat.Matrix, error) {
 	vals := make([]float64, k.grid.NPoints())
 	vecs := mat.Matrix(mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil))
@@ -157,9 +160,11 @@ func (k *KeDvrBasis) Diagonalize() ([]float64, mat.Matrix, error) {
 	return vals, vecs, err
 }
 
-func (k *KeDvrBasis) ExpDt(In []float64) []float64 {
+func (k *KeDvrBasis) ExpDt(Dt float64, In []float64) []float64 {
 	expMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
-	expMat.Exp(k.kMat)
+	scaledMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
+	scaledMat.Scale(Dt, k.kMat)
+	expMat.Exp(scaledMat)
 	inVec := mat.NewVecDense(len(In), In)
 	outVec := mat.NewVecDense(len(In), nil)
 	outVec.MulVec(expMat, inVec)
@@ -171,26 +176,21 @@ func (k *KeDvrBasis) ExpDt(In []float64) []float64 {
 	return result
 }
 
-func (k *KeDvrBasis) ExpDtTo(In []float64, Out []float64) {
+func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) {
 	expMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
 	expMat.Exp(k.kMat)
-	inVec := mat.NewVecDense(len(In), In)
-	outVec := mat.NewVecDense(len(In), nil)
-	outVec.MulVec(expMat, inVec)
-
-	for i := 0; i < len(In); i++ {
-		Out[i] = outVec.AtVec(i)
-	}
+	Out = k.ExpDt(Dt, In)
 }
 
-func (k *KeDvrBasis) ExpDtInPlace(InOut []float64) {
-	k.ExpDtTo(InOut, InOut)
+func (k *KeDvrBasis) ExpDtInPlace(Dt float64, InOut []float64) {
+	k.ExpDtTo(Dt, InOut, InOut)
 }
 
-func (k *KeDvrBasis) ExpIdt(In []complex128) []complex128 {
+func (k *KeDvrBasis) ExpIdt(Dt float64, In []complex128) []complex128 {
 	expMat := mat.NewCDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
-	result := make([]complex128, len(In))
+	expMat.Set(1, 2, complex(Dt, 1))
 
+	result := make([]complex128, len(In))
 	cblas128.Gemv(
 		blas.NoTrans,
 		1,
@@ -203,19 +203,12 @@ func (k *KeDvrBasis) ExpIdt(In []complex128) []complex128 {
 	return result
 }
 
-func (k *KeDvrBasis) ExpIdtTo(In []complex128, Out []complex128) {
+func (k *KeDvrBasis) ExpIdtTo(Dt float64, In []complex128, Out []complex128) {
 	expMat := mat.NewCDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
-
-	cblas128.Gemv(
-		blas.NoTrans,
-		1,
-		expMat.RawCMatrix(),
-		cblas128.Vector{N: len(In), Data: In, Inc: 1},
-		0, // beta = 0
-		cblas128.Vector{N: len(Out), Data: Out, Inc: 1},
-	)
+	expMat.Set(1, 2, complex(Dt, 1))
+	Out = k.ExpIdt(Dt, In)
 }
 
-func (k *KeDvrBasis) ExpIdtInPlace(InOut []float64) {
-	k.ExpDtTo(InOut, InOut)
+func (k *KeDvrBasis) ExpIdtInPlace(Dt float64, InOut []complex128) {
+	k.ExpIdtTo(Dt, InOut, InOut)
 }

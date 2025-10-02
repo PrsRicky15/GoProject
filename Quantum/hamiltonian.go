@@ -10,15 +10,17 @@ type HamiltonianOp struct {
 	grid *gridData.RadGrid
 	kinE KineticOp
 	potE *gridData.PotentialOp
-	hmat *mat.Dense
+	hmat mat.Matrix
 }
 
 func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp) *HamiltonianOp {
 	kinE := NewKeDVR(grid, mass)
+	Hmat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
 	return &HamiltonianOp{
 		grid: grid,
 		kinE: kinE,
 		potE: &Pot,
+		hmat: Hmat,
 	}
 }
 
@@ -31,7 +33,7 @@ func (op *HamiltonianOp) Mat() {
 	op.hmat = op.kinE.(*KeDvrBasis).kMat
 
 	for i := 0; i < int(op.grid.NPoints()); i++ {
-		op.hmat.Set(i, i, op.hmat.At(i, i)+vPot[i])
+		op.hmat.(*mat.Dense).Set(i, i, op.hmat.At(i, i)+vPot[i])
 	}
 }
 
