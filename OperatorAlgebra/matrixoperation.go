@@ -1,4 +1,4 @@
-package Quantum
+package OperatorAlgebra
 
 import (
 	"gonum.org/v1/gonum/lapack"

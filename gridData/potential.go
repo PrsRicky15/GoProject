@@ -7,12 +7,12 @@ import (
 	"GoProject/mathsFunc"
 )
 
-type varType interface {
+type VarType interface {
 	float64 | complex128
 }
 
 // PotentialOp General interface for the evaluating the potential on a grid
-type PotentialOp[T varType] interface {
+type PotentialOp[T VarType] interface {
 	evaluateAt(x T) T
 	evaluateOnGrid(x []T) []T
 	forceAt(x T) T
@@ -20,7 +20,7 @@ type PotentialOp[T varType] interface {
 	saveToFile() error
 }
 
-type ChebyshevScalar[T varType] struct {
+type ChebyshevScalar[T VarType] struct {
 	mathsFunc.ChebyshevFirstKind[T]
 }
 

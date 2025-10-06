@@ -1,4 +1,4 @@
-package Quantum
+package OperatorAlgebra
 
 import (
 	"GoProject/gridData"
@@ -6,49 +6,8 @@ import (
 
 	"gonum.org/v1/gonum/blas"
 	"gonum.org/v1/gonum/blas/cblas128"
-
 	"gonum.org/v1/gonum/mat"
 )
-
-type MatrixOp interface {
-	Mat()
-	GetMat() mat.Matrix
-	GetCMat() mat.Matrix
-	Diagonalize() ([]float64, mat.Matrix, error)
-}
-
-type CanTimeSolverOp interface {
-	ExpDtTo(At float64, In []float64, Out []float64)
-	ExpDtInPlace(At float64, InOut []float64)
-}
-
-type TimeSolverOp interface {
-	ExpDtTo(Dt float64, In []float64, Out []float64)
-	ExpDtInPlace(Dt float64, InOut []float64)
-
-	ExpIdtTo(Dt float64, In []complex128, Out []complex128)
-	ExpIdtInPlace(Dt float64, InOut []complex128)
-}
-
-type MomentumOp interface {
-	MatrixOp
-	TimeSolverOp
-}
-
-type KineticOp interface {
-	MatrixOp
-	TimeSolverOp
-}
-
-type CanMomentumOp interface {
-	MatrixOp
-	CanTimeSolverOp
-}
-
-type CanKineticOp interface {
-	MatrixOp
-	CanTimeSolverOp
-}
 
 type CanonicalMomDvrBasis struct {
 	grid *gridData.RadGrid
@@ -71,7 +30,7 @@ type CanonicalKeDvrBasis struct {
 type KeDvrBasis struct {
 	grid  *gridData.RadGrid
 	mass  float64
-	kMat  mat.Matrix
+	KMat  mat.Matrix
 	uMat  mat.Matrix
 	keVal []float64
 }
@@ -83,7 +42,7 @@ func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
 	return &KeDvrBasis{
 		grid:  grid,
 		mass:  mass,
-		kMat:  keMat,
+		KMat:  keMat,
 		uMat:  uMat,
 		keVal: eval,
 	}
@@ -141,14 +100,14 @@ func (k *KeDvrBasis) zeroToInfinity(keMat mat.Matrix) {
 
 func (k *KeDvrBasis) Mat() {
 	if math.Abs(k.grid.RMax()-k.grid.RMin()) <= 1 {
-		k.zeroToInfinity(k.kMat)
+		k.zeroToInfinity(k.KMat)
 	} else {
-		k.mInfinityToInfinity(k.kMat)
+		k.mInfinityToInfinity(k.KMat)
 	}
 }
 
-func (k *KeDvrBasis) GetMat() mat.Matrix  { return k.kMat }
-func (k *KeDvrBasis) GetCMat() mat.Matrix { return k.kMat }
+func (k *KeDvrBasis) GetMat() mat.Matrix  { return k.KMat }
+func (k *KeDvrBasis) GetCMat() mat.Matrix { return k.KMat }
 
 func (k *KeDvrBasis) Diagonalize() ([]float64, mat.Matrix, error) {
 	vals := make([]float64, k.grid.NPoints())
@@ -160,7 +119,7 @@ func (k *KeDvrBasis) Diagonalize() ([]float64, mat.Matrix, error) {
 func (k *KeDvrBasis) ExpDt(Dt float64, In []float64) []float64 {
 	expMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
 	scaledMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
-	scaledMat.Scale(Dt, k.kMat)
+	scaledMat.Scale(Dt, k.KMat)
 	expMat.Exp(scaledMat)
 	inVec := mat.NewVecDense(len(In), In)
 	outVec := mat.NewVecDense(len(In), nil)
@@ -175,7 +134,7 @@ func (k *KeDvrBasis) ExpDt(Dt float64, In []float64) []float64 {
 
 func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) {
 	expMat := mat.NewDense(int(k.grid.NPoints()), int(k.grid.NPoints()), nil)
-	expMat.Exp(k.kMat)
+	expMat.Exp(k.KMat)
 	Out = k.ExpDt(Dt, In)
 }
 

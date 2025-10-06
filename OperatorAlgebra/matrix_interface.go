@@ -1,4 +1,4 @@
-package Quantum
+package OperatorAlgebra
 
 import (
 	"fmt"

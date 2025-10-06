@@ -24,7 +24,7 @@ type getGridData interface {
 }
 
 // GridFunctionality Functionality used in both R-Grid and T-Grid
-type GridFunctionality[T varType] interface {
+type GridFunctionality[T VarType] interface {
 	PotentialAt(pot PotentialOp[T], x T) T
 	DisplayInfo()
 	PrintPotentToFile(Pot PotentialOp[T], filename string, format string) error
