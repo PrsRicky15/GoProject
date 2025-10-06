@@ -24,10 +24,10 @@ type getGridData interface {
 }
 
 // GridFunctionality Functionality used in both R-Grid and T-Grid
-type GridFunctionality interface {
-	PotentialAt(pot PotentialOp, x float64) float64
+type GridFunctionality[T varType] interface {
+	PotentialAt(pot PotentialOp[T], x T) T
 	DisplayInfo()
-	PrintPotentToFile(Pot PotentialOp, filename string, format string) error
+	PrintPotentToFile(Pot PotentialOp[T], filename string, format string) error
 }
 
 /*
@@ -35,8 +35,8 @@ type GridFunctionality interface {
 */
 
 // displayFunc Display function on a grid
-func displayFunc(g getGridData, Pot PotentialOp, format string,
-	f func(evaluate PotentialOp, x float64) float64) {
+func displayFunc(g getGridData, Pot PotentialOp[float64], format string,
+	f func(evaluate PotentialOp[float64], x float64) float64) {
 	fullFormat := "%14.7e" + "\t" + format + "\n"
 	fmt.Printf("#--------------------------------------------------\n")
 	fmt.Printf("#\t\t grid\t\t function value\n")
@@ -48,8 +48,8 @@ func displayFunc(g getGridData, Pot PotentialOp, format string,
 }
 
 // functionToFile print function on a grid to a File
-func functionToFile(g getGridData, Pot PotentialOp, filename string, format string,
-	f func(evaluate PotentialOp, x float64) float64) error {
+func functionToFile(g getGridData, Pot PotentialOp[float64], filename string, format string,
+	f func(evaluate PotentialOp[float64], x float64) float64) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

@@ -3,15 +3,29 @@ package gridData
 import (
 	"fmt"
 	"math"
+
+	"GoProject/mathsFunc"
 )
 
+type varType interface {
+	float64 | complex128
+}
+
 // PotentialOp General interface for the evaluating the potential on a grid
-type PotentialOp interface {
-	evaluateAt(x float64) float64
-	evaluateOnGrid(x []float64) []float64
-	forceAt(x float64) float64
-	forceOnGrid(x []float64) []float64
+type PotentialOp[T varType] interface {
+	evaluateAt(x T) T
+	evaluateOnGrid(x []T) []T
+	forceAt(x T) T
+	forceOnGrid(x []T) []T
 	saveToFile() error
+}
+
+type ChebyshevScalar[T varType] struct {
+	mathsFunc.ChebyshevFirstKind[T]
+}
+
+func (ch ChebyshevScalar[T]) evaluateAt(x T, order uint32) T {
+	return ch.Compute(x, order)
 }
 
 func onGrid(f func(float64) float64, x []float64) []float64 {

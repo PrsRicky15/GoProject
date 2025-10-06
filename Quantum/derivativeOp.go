@@ -18,17 +18,14 @@ type MatrixOp interface {
 }
 
 type CanTimeSolverOp interface {
-	ExpDt(At float64, In []float64) []float64
 	ExpDtTo(At float64, In []float64, Out []float64)
 	ExpDtInPlace(At float64, InOut []float64)
 }
 
 type TimeSolverOp interface {
-	ExpDt(Dt float64, In []float64) []float64
 	ExpDtTo(Dt float64, In []float64, Out []float64)
 	ExpDtInPlace(Dt float64, InOut []float64)
 
-	ExpIdt(Dt float64, In []complex128) []complex128
 	ExpIdtTo(Dt float64, In []complex128, Out []complex128)
 	ExpIdtInPlace(Dt float64, InOut []complex128)
 }
@@ -196,7 +193,7 @@ func (k *KeDvrBasis) ExpIdt(Dt float64, In []complex128) []complex128 {
 		1,
 		expMat.RawCMatrix(),
 		cblas128.Vector{N: len(In), Data: In, Inc: 1},
-		0, // beta = 0
+		0,
 		cblas128.Vector{N: len(result), Data: result, Inc: 1},
 	)
 
