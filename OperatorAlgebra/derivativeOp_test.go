@@ -1,7 +1,6 @@
 package OperatorAlgebra
 
 import (
-	"GoProject/Quantum"
 	"GoProject/gridData"
 	"testing"
 )
