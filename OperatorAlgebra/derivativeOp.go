@@ -1,14 +1,9 @@
 package OperatorAlgebra
 
-import (
-	"gonum.org/v1/gonum/mat"
-)
+import "gonum.org/v1/gonum/mat"
 
 type MatrixOp interface {
-	Mat()
-	GetMat() mat.Matrix
-	GetCMat() mat.Matrix
-	Diagonalize() ([]float64, mat.Matrix, error)
+	RealDiagonalize() (eigenvalues []float64, eigenvectors *mat.Dense, err error)
 }
 
 type CanTimeSolverOp interface {
