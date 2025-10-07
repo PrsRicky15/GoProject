@@ -7,27 +7,27 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-type HamiltonianOp[T gridData.VarType] struct {
+type HamiltonianOp struct {
 	grid *gridData.RadGrid
 	kinE OperatorAlgebra.KineticOp
-	potE *gridData.PotentialOp[T]
+	potE gridData.PotentialOp[float64]
 	hmat mat.Matrix
 }
 
-func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp[float64] {
+func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp {
 	kinE := OperatorAlgebra.NewKeDVR(grid, mass)
 	Hmat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
-	return &HamiltonianOp[float64]{
+	return &HamiltonianOp{
 		grid: grid,
 		kinE: kinE,
-		potE: &Pot,
+		potE: Pot,
 		hmat: Hmat,
 	}
 }
 
-func (op *HamiltonianOp[float64]) Mat() {
-	vPot := op.grid.PotentialOnGrid(*op.potE)
-	err := op.grid.PrintVectorToFile(vPot, "potent.dat", "%21.14e")
+func (op *HamiltonianOp) Mat() {
+	vPot := op.grid.PotentialOnGrid(op.potE)
+	err := op.grid.PrintVectorToFileRe(vPot, "potent.dat", "%21.14e")
 	if err != nil {
 		return
 	}
@@ -38,6 +38,6 @@ func (op *HamiltonianOp[float64]) Mat() {
 	}
 }
 
-func (op *HamiltonianOp[float64]) EvaluateOp() *mat.Dense {
+func (op *HamiltonianOp) EvaluateOp() *mat.Dense {
 	return nil
 }

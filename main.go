@@ -18,12 +18,12 @@ func main() {
 	s := "Ricky"
 	fmt.Printf("Hello and welcome, %s!\n", s)
 
-	potent := gridData.SoftCore{Charge: 1., SoftParam: 0.5}
+	potent := gridData.SoftCore[float64]{Charge: 1., SoftParam: 0.5}
 	grid, _ := gridData.NewRGridFromFile(filePath)
 	fmt.Println(grid)
 	grid.DisplayInfo()
-	err := grid.PrintPotentToFile(potent, "softcore.dat", "%21.14e")
-	err = grid.PrintForceToFile(potent, "forceSoftcore.dat", "%21.14e")
+	err := grid.PrintPotentToFileRe(potent, "softcore.dat", "%21.14e")
+	err = grid.PrintForceToFileRe(potent, "forceSoftcore.dat", "%21.14e")
 	if err != nil {
 		panic(err)
 	}

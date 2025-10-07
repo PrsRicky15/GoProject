@@ -18,6 +18,21 @@ type RadGrid struct {
 	cutoffE  float64
 }
 
+func (g *RadGrid) String() string {
+	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaK: %.6g, CutOffe: %.6g}",
+		g.rMin, g.rMax, g.nPoints, g.gridData.deltaCS, g.cutoffE)
+}
+
+func (g *RadGrid) DisplayInfo() {
+	fmt.Println("#-------------------------------------------------------------")
+	fmt.Println("# Real-Space-grid parameters:")
+	fmt.Printf("Real Space - Min:    %8.4g | Max: %8.4g | Dr: %8.4g\n", g.RMin(), g.RMax(), g.DeltaR())
+	fmt.Printf("K Space    - Min:    %8.4g | Max: %8.4g | Dk: %8.4g\n", g.KMin(), g.KMax(), g.DeltaK())
+	fmt.Printf("Grid       - Length: %8.4g | Points: %5d | Cutoff Energy: %8.4g\n",
+		g.Length(), g.NPoints(), g.CutoffE())
+	fmt.Println("#-------------------------------------------------------------")
+}
+
 func NewRGrid(rMin, rMax float64, nPoints uint32) (*RadGrid, error) {
 	igridData, err := createGrid(rMin, rMax, nPoints, "Rgrid")
 	if err != nil {
@@ -116,83 +131,78 @@ func (g *RadGrid) getdS() float64   { return g.gridData.deltaS }
 func (g *RadGrid) getdCS() float64  { return g.gridData.deltaCS }
 func (g *RadGrid) getNgrid() uint32 { return g.nPoints }
 
+func (g *RadGrid) RMin() float64    { return g.rMin }
+func (g *RadGrid) RMax() float64    { return g.rMax }
+func (g *RadGrid) NPoints() uint32  { return g.nPoints }
+func (g *RadGrid) DeltaR() float64  { return g.gridData.deltaS }
+func (g *RadGrid) Length() float64  { return g.gridData.length }
+func (g *RadGrid) DeltaK() float64  { return g.gridData.deltaCS }
+func (g *RadGrid) KMin() float64    { return g.gridData.cMin }
+func (g *RadGrid) KMax() float64    { return g.gridData.cMax }
+func (g *RadGrid) CutoffE() float64 { return g.cutoffE }
+
 func (g *RadGrid) RValues() []float64 { return generatePoints(g) }
 func (g *RadGrid) KValues() []float64 { return generateConjugatePoints(g) }
-func (g *RadGrid) RMin() float64      { return g.rMin }
-func (g *RadGrid) RMax() float64      { return g.rMax }
-func (g *RadGrid) NPoints() uint32    { return g.nPoints }
-func (g *RadGrid) DeltaR() float64    { return g.gridData.deltaS }
-func (g *RadGrid) Length() float64    { return g.gridData.length }
-func (g *RadGrid) DeltaK() float64    { return g.gridData.deltaCS }
-func (g *RadGrid) KMin() float64      { return g.gridData.cMin }
-func (g *RadGrid) KMax() float64      { return g.gridData.cMax }
-func (g *RadGrid) CutoffE() float64   { return g.cutoffE }
 func (g *RadGrid) DisplayRGrid()      { displayGrid(g.RValues) }
 func (g *RadGrid) DisplayKGrid()      { displayGrid(g.KValues) }
 
-func (g *RadGrid) PotentialAt(pot any, x any) any {
-	switch p := pot.(type) {
-	case PotentialOp[float64]:
-		return p.evaluateAt(x.(float64))
-	case PotentialOp[complex128]:
-		return p.evaluateAt(x.(complex128))
-	default:
-		panic("unsupported potential type")
-	}
+func (g *RadGrid) PotentialAtR(pot PotentialOp[float64], x float64) float64 {
+	return pot.evaluateAt(x)
 }
-
-func (g *RadGrid) ForceAt(pot PotentialOp[T.VarType], x any) any {
-	switch p := pot.(type) {
-	case PotentialOp[float64]:
-		return p.forceAt(x.(float64))
-	case PotentialOp[complex128]:
-		return p.forceAt(x.(complex128))
-	default:
-		panic("unsupported potential type")
-	}
+func (g *RadGrid) ForceAtR(pot PotentialOp[float64], x float64) float64 { return pot.forceAt(x) }
+func (g *RadGrid) PotentialAtZ(pot PotentialOp[complex128], x complex128) complex128 {
+	return pot.evaluateAt(x)
 }
-
-func (g *RadGrid) DisplayPotential(Pot PotentialOp[float64], format string) {
-	displayFuncReal(g, Pot, format, g.PotentialAt)
-}
-func (g *RadGrid) DisplayForce(Pot PotentialOp[float64], theta float64, format string) {
-	displayFuncReal(g, Pot, format, g.ForceAt.(any))
+func (g *RadGrid) ForceAtZ(pot PotentialOp[complex128], x complex128) complex128 {
+	return pot.forceAt(x)
 }
 
 func (g *RadGrid) PotentialOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.evaluateOnGrid(g.RValues())
 }
-
 func (g *RadGrid) ForceOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.forceOnGrid(g.RValues())
 }
 
-func (g *RadGrid) PrintPotentToFile(Pot PotentialOp[float64], filename string, format string) error {
-	err := functionToFile(g, Pot, filename, format, g.PotentialAt)
+func (g *RadGrid) DisplayPotentialRe(Pot PotentialOp[float64], format string) {
+	displayFunc(g, Pot, format, g.PotentialAtR)
+}
+func (g *RadGrid) DisplayPotentialC(Pot PotentialOp[complex128], format string, theta float64) {
+	displayFunc(g, Pot, format, g.PotentialAtZ, theta)
+}
+func (g *RadGrid) DisplayForceRe(Pot PotentialOp[float64], format string) {
+	displayFunc(g, Pot, format, g.ForceAtR)
+}
+func (g *RadGrid) DisplayForceC(Pot PotentialOp[complex128], format string, theta float64) {
+	displayFunc(g, Pot, format, g.ForceAtZ, theta)
+}
+
+func (g *RadGrid) PrintPotentToFileRe(Pot PotentialOp[float64], filename string, format string) error {
+	err := functionToFile(g, Pot, filename, format, g.PotentialAtR)
 	return err
 }
 
-func (g *RadGrid) PrintForceToFile(Pot PotentialOp[float64], filename string, format string) error {
-	err := functionToFile(g, Pot, filename, format, g.ForceAt)
+func (g *RadGrid) PrintPotentToFileZ(Pot PotentialOp[complex128], filename string, format string, theta float64) error {
+	err := functionToFile(g, Pot, filename, format, g.PotentialAtZ, theta)
 	return err
 }
 
-func (g *RadGrid) PrintVectorToFile(vec []float64, filename string, format string) error {
+func (g *RadGrid) PrintForceToFileRe(Pot PotentialOp[float64], filename string, format string) error {
+	err := functionToFile(g, Pot, filename, format, g.ForceAtR)
+	return err
+}
+
+func (g *RadGrid) PrintForceToFileZ(Pot PotentialOp[complex128], filename string, format string, theta float64) error {
+	err := functionToFile(g, Pot, filename, format, g.ForceAtZ, theta)
+	return err
+}
+
+func (g *RadGrid) PrintVectorToFileRe(vec []float64, filename string, format string) error {
 	err := vectorToFile(g, vec, filename, format)
 	return err
 }
 
-func (g *RadGrid) String() string {
-	return fmt.Sprintf("RadGrid{rMin: %.6g, rMax: %.6g, nPoints: %d, deltaK: %.6g, CutOffe: %.6g}",
-		g.rMin, g.rMax, g.nPoints, g.gridData.deltaCS, g.cutoffE)
-}
-
-func (g *RadGrid) DisplayInfo() {
-	fmt.Println("#-------------------------------------------------------------")
-	fmt.Println("# Real-Space-grid parameters:")
-	fmt.Printf("Real Space - Min:    %8.4g | Max: %8.4g | Dr: %8.4g\n", g.RMin(), g.RMax(), g.DeltaR())
-	fmt.Printf("K Space    - Min:    %8.4g | Max: %8.4g | Dk: %8.4g\n", g.KMin(), g.KMax(), g.DeltaK())
-	fmt.Printf("Grid       - Length: %8.4g | Points: %5d | Cutoff Energy: %8.4g\n",
-		g.Length(), g.NPoints(), g.CutoffE())
-	fmt.Println("#-------------------------------------------------------------")
+func (g *RadGrid) PrintVectorToFileZ(vec []complex128, filename string, format string) error {
+	err := vectorToFile(g, vec, filename, format)
+	return err
 }

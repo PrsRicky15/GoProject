@@ -25,42 +25,42 @@ type getGridData interface {
 }
 
 // GridFunctionality Functionality used in both R-Grid and T-Grid
-type GridFunctionality[T VarType] interface {
-	PotentialAt(pot PotentialOp[T], x T) T
+type GridFunctionality interface {
 	DisplayInfo()
-	PrintPotentToFile(Pot PotentialOp[T], filename string, format string) error
 }
 
 // <p> Some Important function which defines R-Grid and T-grid properly without duplication
 // displayFunc Display function on a grid <\p>
-func displayFuncReal(g getGridData, Pot PotentialOp[float64], format string,
-	f func(evaluate PotentialOp[float64], x float64) float64) {
-	fullFormat := "%14.7e" + "\t" + format + "\n"
-	fmt.Printf("#--------------------------------------------------\n")
-	fmt.Printf("#\t\t grid\t\t function value\n")
-	fmt.Printf("#--------------------------------------------------\n")
-	for i := uint32(0); i < g.getNgrid(); i++ {
-		var x = g.getMin() + float64(i)*g.getdS()
-		fmt.Printf(fullFormat, x, f(Pot, x))
-	}
-}
+func displayFunc[T VarType](g getGridData, Pot PotentialOp[T], format string,
+	f func(evaluate PotentialOp[T], x T) T, theta ...float64) {
+	fullFormat := "%14.7e\t" + format + "\n"
 
-func displayFuncComplex(g getGridData, Pot PotentialOp[complex128], format string, theta float64,
-	f func(evaluate PotentialOp[complex128], x complex128) complex128) {
-	fullFormat := "%14.7e" + "\t" + format + "\n"
-	fmt.Printf("#--------------------------------------------------\n")
-	fmt.Printf("#\t\t grid\t\t function value\n")
-	fmt.Printf("#--------------------------------------------------\n")
-	for i := uint32(0); i < g.getNgrid(); i++ {
-		itheta := complex(0, theta)
-		var x = complex(g.getMin()+float64(i)*g.getdS(), 0.) * cmplx.Exp(itheta)
-		fmt.Printf(fullFormat, x, f(Pot, x))
+	switch any(*new(T)).(type) {
+	case float64:
+		fmt.Printf("#--------------------------------------------------\n")
+		fmt.Printf("#\t\t grid\t\t function value\n")
+		fmt.Printf("#--------------------------------------------------\n")
+		for i := uint32(0); i < g.getNgrid(); i++ {
+			x := g.getMin() + float64(i)*g.getdS()
+			fmt.Printf(fullFormat, x, f(Pot, any(x).(T)))
+		}
+	case complex128:
+		fmt.Printf("#--------------------------------------------------\n")
+		fmt.Printf("#\t\t grid\t\t function value\n")
+		fmt.Printf("#--------------------------------------------------\n")
+		for i := uint32(0); i < g.getNgrid(); i++ {
+			itheta := complex(0, theta[0])
+			x := complex(g.getMin()+float64(i)*g.getdS(), 0) * cmplx.Exp(itheta)
+			fmt.Printf(fullFormat, x, f(Pot, any(x).(T)))
+		}
+	default:
+		panic("unsupported type in displayFunc")
 	}
 }
 
 // functionToFile print function on a grid to a File
-func functionToFile(g getGridData, Pot PotentialOp[float64], filename string, format string,
-	f func(evaluate PotentialOp[float64], x float64) float64) error {
+func functionToFile[T VarType](g getGridData, Pot PotentialOp[T], filename string,
+	format string, f func(evaluate PotentialOp[T], x T) T, theta ...float64) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -73,20 +73,37 @@ func functionToFile(g getGridData, Pot PotentialOp[float64], filename string, fo
 	}(file)
 
 	fullFormat := "%14.7e" + "\t" + format + "\n"
-	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
-	_, err = fmt.Fprintf(file, "#\t\t grid\t\t function value\n")
-	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
-	for i := uint32(0); i < g.getNgrid(); i++ {
-		var x = g.getMin() + float64(i)*g.getdS()
-		_, err := fmt.Fprintf(file, fullFormat, x, f(Pot, x))
-		if err != nil {
-			return err
+	switch any(*new(T)).(type) {
+	case float64:
+		_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+		_, err = fmt.Fprintf(file, "#\t\t grid\t\t function value\n")
+		_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+		for i := uint32(0); i < g.getNgrid(); i++ {
+			var x = g.getMin() + float64(i)*g.getdS()
+			_, err := fmt.Fprintf(file, fullFormat, x, f(Pot, any(x).(T)))
+			if err != nil {
+				return err
+			}
 		}
+	case complex128:
+		_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+		_, err = fmt.Fprintf(file, "#\t\t grid\t\t function value\n")
+		_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+		for i := uint32(0); i < g.getNgrid(); i++ {
+			itheta := complex(0, theta[0])
+			x := complex(g.getMin()+float64(i)*g.getdS(), 0) * cmplx.Exp(itheta)
+			_, err := fmt.Fprintf(file, fullFormat, x, f(Pot, any(x).(T)))
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		panic("unsupported type in displayFunc")
 	}
 	return nil
 }
 
-func vectorToFile(g getGridData, vec []float64, filename string, format string) error {
+func vectorToFile[T VarType](g getGridData, vec []T, filename string, format string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

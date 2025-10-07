@@ -38,6 +38,48 @@ func (m Morse[T]) String() string {
 	return fmt.Sprintf(" De [1 - Exp(-a(x - x0))]^2, where, De: %g, a: %g, x0: %g", m.De, m.Alpha, m.Cen)
 }
 
+func (m Morse[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		mf64 := MorseF64(m)
+		result = mf64.evaluateAt(any(x).(float64))
+	case complex128:
+		mz64 := MorseZ64(m)
+		result = mz64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (m Morse[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		mf64 := MorseF64(m)
+		result = mf64.forceAt(any(x).(float64))
+	case complex128:
+		mz64 := MorseZ64(m)
+		result = mz64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (m Morse[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(m.evaluateAt, x)
+}
+
+func (m Morse[T]) forceOnGrid(x []T) []T {
+	return onGrid(m.forceAt, x)
+}
+
 // MorseF64 For float64 specialization
 type MorseF64 Morse[float64]
 
@@ -51,9 +93,6 @@ func (m MorseF64) forceAt(x float64) float64 {
 	val := -2 * m.Alpha * m.De
 	return val * expterm * (1 - expterm)
 }
-
-func (m MorseF64) forceOnGrid(x []float64) []float64    { return onGrid(m.forceAt, x) }
-func (m MorseF64) evaluateOnGrid(x []float64) []float64 { return onGrid(m.evaluateAt, x) }
 
 // MorseZ64 For complex64 specialization
 type MorseZ64 Morse[complex128]
@@ -70,9 +109,6 @@ func (m MorseZ64) forceAt(x complex128) complex128 {
 	return val * expterm * (1 - expterm)
 }
 
-func (m MorseZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(m.evaluateAt, x) }
-func (m MorseZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(m.forceAt, x) }
-
 // SoftCore with generic type parameter
 type SoftCore[T VarType] struct {
 	Charge    float64
@@ -83,6 +119,48 @@ type SoftCore[T VarType] struct {
 func (sc SoftCore[T]) String() string {
 	return fmt.Sprintf("Za/Sqrt((x - x0)^2 + a^2), where Za=%g, x0=%g, a^2=%g",
 		sc.Charge, sc.Centre, sc.SoftParam*sc.SoftParam)
+}
+
+func (sc SoftCore[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		s := SoftCoreF64(sc)
+		result = s.evaluateAt(any(x).(float64))
+	case complex128:
+		s := SoftCoreZ64(sc)
+		result = s.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (sc SoftCore[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		s := SoftCoreF64(sc)
+		result = s.forceAt(any(x).(float64))
+	case complex128:
+		s := SoftCoreZ64(sc)
+		result = s.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (sc SoftCore[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(sc.evaluateAt, x)
+}
+
+func (sc SoftCore[T]) forceOnGrid(x []T) []T {
+	return onGrid(sc.forceAt, x)
 }
 
 // SoftCoreF64 For float64 specialization
@@ -97,9 +175,6 @@ func (sc SoftCoreF64) forceAt(x float64) float64 {
 	val := (x-sc.Centre)*(x-sc.Centre) + sc.SoftParam*sc.SoftParam
 	return coef * math.Pow(val, -3./2.)
 }
-
-func (sc SoftCoreF64) evaluateOnGrid(x []float64) []float64 { return onGrid(sc.evaluateAt, x) }
-func (sc SoftCoreF64) forceOnGrid(x []float64) []float64    { return onGrid(sc.forceAt, x) }
 
 // SoftCoreZ64 For complex128 specialization
 type SoftCoreZ64 SoftCore[complex128]
@@ -116,11 +191,6 @@ func (sc SoftCoreZ64) forceAt(x complex128) complex128 {
 	return coef * cmplx.Pow(val, -3./2.)
 }
 
-func (sc SoftCoreZ64) evaluateOnGrid(x []complex128) []complex128 {
-	return onGrid(sc.evaluateAt, x)
-}
-func (sc SoftCoreZ64) forceOnGrid(x []complex128) []complex128 { return onGrid(sc.forceAt, x) }
-
 // Gaussian PotentialOp
 type Gaussian[T VarType] struct {
 	Cen      float64
@@ -131,6 +201,48 @@ type Gaussian[T VarType] struct {
 func (g Gaussian[T]) String() string {
 	return fmt.Sprintf("v0 Exp((x - x0)^2/(2 Sigma^2)),"+
 		" Where v0 = %g, x0 = %v, sigma = %g", g.Strength, g.Cen, g.Sigma)
+}
+
+func (g Gaussian[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := Gaussianf64(g)
+		result = gf64.evaluateAt(any(x).(float64))
+	case complex128:
+		gz64 := GaussianZ64(g)
+		result = gz64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (g Gaussian[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := Gaussianf64(g)
+		result = gf64.forceAt(any(x).(float64))
+	case complex128:
+		gz64 := GaussianZ64(g)
+		result = gz64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (g Gaussian[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(g.evaluateAt, x)
+}
+
+func (g Gaussian[T]) forceOnGrid(x []T) []T {
+	return onGrid(g.forceAt, x)
 }
 
 func xBySigma(x float64, sigma float64) float64 {
@@ -151,9 +263,6 @@ func (g Gaussianf64) forceAt(x float64) float64 {
 	return val * math.Exp(-expnt*expnt/2)
 }
 
-func (g Gaussianf64) forceOnGrid(x []float64) []float64    { return onGrid(g.evaluateAt, x) }
-func (g Gaussianf64) evaluateOnGrid(x []float64) []float64 { return onGrid(g.forceAt, x) }
-
 type GaussianZ64 Gaussian[complex128]
 
 func (g GaussianZ64) evaluateAt(x complex128) complex128 {
@@ -167,9 +276,6 @@ func (g GaussianZ64) forceAt(x complex128) complex128 {
 	return val * cmplx.Exp(-cmplx.Pow(expnt, 2)/complex(2, 0.))
 }
 
-func (g GaussianZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(g.evaluateAt, x) }
-func (g GaussianZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(g.forceAt, x) }
-
 // MultiGaussian PotentialOp
 type MultiGaussian[T VarType] struct {
 	Sigma    float64
@@ -182,6 +288,48 @@ func (mg MultiGaussian[T]) String() string {
 	return fmt.Sprintf("v0 Sum_i Exp((x - i L)^2/(2 Sigma^2)),"+
 		" Where v0 = %g, i = %v, sigma = %g, L = %g", mg.Strength,
 		mg.NumGauss, mg.Sigma, mg.Gap)
+}
+
+func (mg MultiGaussian[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := MultiGaussF64(mg)
+		result = gf64.evaluateAt(any(x).(float64))
+	case complex128:
+		gz64 := MultiGaussZ64(mg)
+		result = gz64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (mg MultiGaussian[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := MultiGaussF64(mg)
+		result = gf64.forceAt(any(x).(float64))
+	case complex128:
+		gz64 := MultiGaussZ64(mg)
+		result = gz64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (mg MultiGaussian[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(mg.evaluateAt, x)
+}
+
+func (mg MultiGaussian[T]) forceOnGrid(x []T) []T {
+	return onGrid(mg.forceAt, x)
 }
 
 type MultiGaussF64 MultiGaussian[float64]
@@ -232,9 +380,6 @@ func (mg MultiGaussF64) forceAt(x float64) float64 {
 	return mg.Strength * val
 }
 
-func (mg MultiGaussF64) forceOnGrid(x []float64) []float64    { return onGrid(mg.evaluateAt, x) }
-func (mg MultiGaussF64) evaluateOnGrid(x []float64) []float64 { return onGrid(mg.forceAt, x) }
-
 type MultiGaussZ64 MultiGaussian[complex128]
 
 func (mg MultiGaussZ64) evaluateAt(x complex128) complex128 {
@@ -284,9 +429,6 @@ func (mg MultiGaussZ64) forceAt(x complex128) complex128 {
 	return complex(mg.Strength, 0.) * val
 }
 
-func (mg MultiGaussZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(mg.evaluateAt, x) }
-func (mg MultiGaussZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(mg.forceAt, x) }
-
 // SuperGaussian v(x)= v0 exp(-(x/Sigma)^n)
 type SuperGaussian[T VarType] struct {
 	Cen      float64
@@ -297,6 +439,48 @@ type SuperGaussian[T VarType] struct {
 
 func (sg SuperGaussian[T]) String() string {
 	return fmt.Sprintf("%g Exp[ ((x - %g)/ %g)^%v]", sg.Strength, sg.Cen, sg.Sigma, sg.Order)
+}
+
+func (sg SuperGaussian[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := SupGaussF64(sg)
+		result = gf64.evaluateAt(any(x).(float64))
+	case complex128:
+		gz64 := SupGaussZ64(sg)
+		result = gz64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (sg SuperGaussian[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := SupGaussF64(sg)
+		result = gf64.forceAt(any(x).(float64))
+	case complex128:
+		gz64 := SupGaussZ64(sg)
+		result = gz64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (sg SuperGaussian[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(sg.evaluateAt, x)
+}
+
+func (sg SuperGaussian[T]) forceOnGrid(x []T) []T {
+	return onGrid(sg.forceAt, x)
 }
 
 type SupGaussF64 SuperGaussian[float64]
@@ -313,9 +497,6 @@ func (sg SupGaussF64) forceAt(x float64) float64 {
 	return coeffs * math.Exp(-math.Pow(expnt, forder))
 }
 
-func (sg SupGaussF64) forceOnGrid(x []float64) []float64    { return onGrid(sg.evaluateAt, x) }
-func (sg SupGaussF64) evaluateOnGrid(x []float64) []float64 { return onGrid(sg.forceAt, x) }
-
 type SupGaussZ64 SuperGaussian[complex128]
 
 func (sg SupGaussZ64) evaluateAt(x complex128) complex128 {
@@ -330,9 +511,6 @@ func (sg SupGaussZ64) forceAt(x complex128) complex128 {
 	return coeffs * cmplx.Exp(-cmplx.Pow(expnt, complex(forder, 0.)))
 }
 
-func (sg SupGaussZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(sg.evaluateAt, x) }
-func (sg SupGaussZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(sg.forceAt, x) }
-
 // Harmonic v(x)= k/2 x^2
 type Harmonic[T VarType] struct {
 	Cen        float64
@@ -341,12 +519,52 @@ type Harmonic[T VarType] struct {
 
 func (h Harmonic[T]) String() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
 
+func (h Harmonic[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := HarmonicF64(h)
+		result = gf64.evaluateAt(any(x).(float64))
+	case complex128:
+		gz64 := HarmonicZ64(h)
+		result = gz64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (h Harmonic[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		gf64 := HarmonicF64(h)
+		result = gf64.forceAt(any(x).(float64))
+	case complex128:
+		gz64 := HarmonicZ64(h)
+		result = gz64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (h Harmonic[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(h.evaluateAt, x)
+}
+
+func (h Harmonic[T]) forceOnGrid(x []T) []T {
+	return onGrid(h.forceAt, x)
+}
+
 type HarmonicF64 Harmonic[float64]
 
-func (h HarmonicF64) evaluateAt(x float64) float64         { return h.ForceConst / 2 * math.Pow(x-h.Cen, 2) }
-func (h HarmonicF64) forceAt(x float64) float64            { return -h.ForceConst * (x - h.Cen) }
-func (h HarmonicF64) evaluateOnGrid(x []float64) []float64 { return onGrid(h.evaluateAt, x) }
-func (h HarmonicF64) forceOnGrid(x []float64) []float64    { return onGrid(h.forceAt, x) }
+func (h HarmonicF64) evaluateAt(x float64) float64 { return h.ForceConst / 2 * math.Pow(x-h.Cen, 2) }
+func (h HarmonicF64) forceAt(x float64) float64    { return -h.ForceConst * (x - h.Cen) }
 
 type HarmonicZ64 Harmonic[complex128]
 
@@ -357,8 +575,6 @@ func (h HarmonicZ64) evaluateAt(x complex128) complex128 {
 func (h HarmonicZ64) forceAt(x complex128) complex128 {
 	return -complex(h.ForceConst, 0.) * (x - complex(h.Cen, 0.))
 }
-func (h HarmonicZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(h.evaluateAt, x) }
-func (h HarmonicZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(h.forceAt, x) }
 
 // Polynomial v(x)= Sum_i ci x^i
 type Polynomial[T VarType] struct {
@@ -410,6 +626,48 @@ func (p Polynomial[T]) String() string {
 	return result
 }
 
+func (p Polynomial[T]) evaluateAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		f64 := PolynomialF64(p)
+		result = f64.evaluateAt(any(x).(float64))
+	case complex128:
+		z64 := PolynomialZ64(p)
+		result = z64.evaluateAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (p Polynomial[T]) forceAt(x T) T {
+	var result any
+
+	switch any(x).(type) {
+	case float64:
+		f64 := PolynomialF64(p)
+		result = f64.forceAt(any(x).(float64))
+	case complex128:
+		z64 := PolynomialZ64(p)
+		result = z64.forceAt(any(x).(complex128))
+	default:
+		panic("unsupported type")
+	}
+
+	return result.(T)
+}
+
+func (p Polynomial[T]) evaluateOnGrid(x []T) []T {
+	return onGrid(p.evaluateAt, x)
+}
+
+func (p Polynomial[T]) forceOnGrid(x []T) []T {
+	return onGrid(p.forceAt, x)
+}
+
 type PolynomialF64 Polynomial[float64]
 
 func (p PolynomialF64) evaluateAt(x float64) float64 {
@@ -432,9 +690,6 @@ func (p PolynomialF64) forceAt(x float64) float64 {
 	return -result
 }
 
-func (p PolynomialF64) evaluateOnGrid(x []float64) []float64 { return onGrid(p.evaluateAt, x) }
-func (p PolynomialF64) forceOnGrid(x []float64) []float64    { return onGrid(p.forceAt, x) }
-
 type PolynomialZ64 Polynomial[complex128]
 
 func (p PolynomialZ64) evaluateAt(x complex128) complex128 {
@@ -456,6 +711,3 @@ func (p PolynomialZ64) forceAt(x complex128) complex128 {
 	}
 	return -result
 }
-
-func (p PolynomialZ64) evaluateOnGrid(x []complex128) []complex128 { return onGrid(p.evaluateAt, x) }
-func (p PolynomialZ64) forceOnGrid(x []complex128) []complex128    { return onGrid(p.forceAt, x) }
