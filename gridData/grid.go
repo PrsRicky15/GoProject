@@ -116,32 +116,55 @@ func (g *RadGrid) getdS() float64   { return g.gridData.deltaS }
 func (g *RadGrid) getdCS() float64  { return g.gridData.deltaCS }
 func (g *RadGrid) getNgrid() uint32 { return g.nPoints }
 
-func (g *RadGrid) RValues() []float64                                      { return generatePoints(g) }
-func (g *RadGrid) KValues() []float64                                      { return generateConjugatePoints(g) }
-func (g *RadGrid) RMin() float64                                           { return g.rMin }
-func (g *RadGrid) RMax() float64                                           { return g.rMax }
-func (g *RadGrid) NPoints() uint32                                         { return g.nPoints }
-func (g *RadGrid) DeltaR() float64                                         { return g.gridData.deltaS }
-func (g *RadGrid) Length() float64                                         { return g.gridData.length }
-func (g *RadGrid) DeltaK() float64                                         { return g.gridData.deltaCS }
-func (g *RadGrid) KMin() float64                                           { return g.gridData.cMin }
-func (g *RadGrid) KMax() float64                                           { return g.gridData.cMax }
-func (g *RadGrid) CutoffE() float64                                        { return g.cutoffE }
-func (g *RadGrid) DisplayRGrid()                                           { displayGrid(g.RValues) }
-func (g *RadGrid) DisplayKGrid()                                           { displayGrid(g.KValues) }
-func (g *RadGrid) PotentialAt(pot PotentialOp[float64], x float64) float64 { return pot.evaluateAt(x) }
-func (g *RadGrid) ForceAt(pot PotentialOp[float64], x float64) float64     { return pot.forceAt(x) }
+func (g *RadGrid) RValues() []float64 { return generatePoints(g) }
+func (g *RadGrid) KValues() []float64 { return generateConjugatePoints(g) }
+func (g *RadGrid) RMin() float64      { return g.rMin }
+func (g *RadGrid) RMax() float64      { return g.rMax }
+func (g *RadGrid) NPoints() uint32    { return g.nPoints }
+func (g *RadGrid) DeltaR() float64    { return g.gridData.deltaS }
+func (g *RadGrid) Length() float64    { return g.gridData.length }
+func (g *RadGrid) DeltaK() float64    { return g.gridData.deltaCS }
+func (g *RadGrid) KMin() float64      { return g.gridData.cMin }
+func (g *RadGrid) KMax() float64      { return g.gridData.cMax }
+func (g *RadGrid) CutoffE() float64   { return g.cutoffE }
+func (g *RadGrid) DisplayRGrid()      { displayGrid(g.RValues) }
+func (g *RadGrid) DisplayKGrid()      { displayGrid(g.KValues) }
+
+func (g *RadGrid) PotentialAt(pot any, x any) any {
+	switch p := pot.(type) {
+	case PotentialOp[float64]:
+		return p.evaluateAt(x.(float64))
+	case PotentialOp[complex128]:
+		return p.evaluateAt(x.(complex128))
+	default:
+		panic("unsupported potential type")
+	}
+}
+
+func (g *RadGrid) ForceAt(pot PotentialOp[T.VarType], x any) any {
+	switch p := pot.(type) {
+	case PotentialOp[float64]:
+		return p.forceAt(x.(float64))
+	case PotentialOp[complex128]:
+		return p.forceAt(x.(complex128))
+	default:
+		panic("unsupported potential type")
+	}
+}
+
+func (g *RadGrid) DisplayPotential(Pot PotentialOp[float64], format string) {
+	displayFuncReal(g, Pot, format, g.PotentialAt)
+}
+func (g *RadGrid) DisplayForce(Pot PotentialOp[float64], theta float64, format string) {
+	displayFuncReal(g, Pot, format, g.ForceAt.(any))
+}
+
 func (g *RadGrid) PotentialOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.evaluateOnGrid(g.RValues())
 }
+
 func (g *RadGrid) ForceOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.forceOnGrid(g.RValues())
-}
-func (g *RadGrid) DisplayPotential(Pot PotentialOp[float64], format string) {
-	displayFunc(g, Pot, format, g.PotentialAt)
-}
-func (g *RadGrid) DisplayForce(Pot PotentialOp[float64], format string) {
-	displayFunc(g, Pot, format, g.ForceAt)
 }
 
 func (g *RadGrid) PrintPotentToFile(Pot PotentialOp[float64], filename string, format string) error {

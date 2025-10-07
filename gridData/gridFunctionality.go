@@ -3,6 +3,7 @@ package gridData
 import (
 	"fmt"
 	"math"
+	"math/cmplx"
 	"os"
 )
 
@@ -30,12 +31,9 @@ type GridFunctionality[T VarType] interface {
 	PrintPotentToFile(Pot PotentialOp[T], filename string, format string) error
 }
 
-/*
- Some Important function which defines R-Grid and T-grid properly without duplication
-*/
-
-// displayFunc Display function on a grid
-func displayFunc(g getGridData, Pot PotentialOp[float64], format string,
+// <p> Some Important function which defines R-Grid and T-grid properly without duplication
+// displayFunc Display function on a grid <\p>
+func displayFuncReal(g getGridData, Pot PotentialOp[float64], format string,
 	f func(evaluate PotentialOp[float64], x float64) float64) {
 	fullFormat := "%14.7e" + "\t" + format + "\n"
 	fmt.Printf("#--------------------------------------------------\n")
@@ -43,6 +41,19 @@ func displayFunc(g getGridData, Pot PotentialOp[float64], format string,
 	fmt.Printf("#--------------------------------------------------\n")
 	for i := uint32(0); i < g.getNgrid(); i++ {
 		var x = g.getMin() + float64(i)*g.getdS()
+		fmt.Printf(fullFormat, x, f(Pot, x))
+	}
+}
+
+func displayFuncComplex(g getGridData, Pot PotentialOp[complex128], format string, theta float64,
+	f func(evaluate PotentialOp[complex128], x complex128) complex128) {
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	fmt.Printf("#--------------------------------------------------\n")
+	fmt.Printf("#\t\t grid\t\t function value\n")
+	fmt.Printf("#--------------------------------------------------\n")
+	for i := uint32(0); i < g.getNgrid(); i++ {
+		itheta := complex(0, theta)
+		var x = complex(g.getMin()+float64(i)*g.getdS(), 0.) * cmplx.Exp(itheta)
 		fmt.Printf(fullFormat, x, f(Pot, x))
 	}
 }
