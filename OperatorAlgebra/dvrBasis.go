@@ -135,7 +135,8 @@ func (k *KeDvrBasis) GetComplexMat(theta float64) *mat.CDense {
 func (k *KeDvrBasis) RealDiagonalize() (eigenvalues []float64, eigenvectors *mat.Dense, err error) {
 	eigenvalues = make([]float64, k.ndims)
 	eigenvectors = mat.NewDense(k.ndims, k.ndims, nil)
-	err = RealDiagonalizeLapack(k, eigenvalues, eigenvectors)
+	eigenvectors = k.GetMat()
+	err = RealDiagonalizeLapack(eigenvectors, eigenvalues)
 	return eigenvalues, eigenvectors, err
 }
 
