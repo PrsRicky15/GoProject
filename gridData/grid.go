@@ -147,21 +147,21 @@ func (g *RadGrid) DisplayRGrid()      { displayGrid(g.RValues) }
 func (g *RadGrid) DisplayKGrid()      { displayGrid(g.KValues) }
 
 func (g *RadGrid) PotentialAtR(pot PotentialOp[float64], x float64) float64 {
-	return pot.evaluateAt(x)
+	return pot.EvaluateAt(x)
 }
-func (g *RadGrid) ForceAtR(pot PotentialOp[float64], x float64) float64 { return pot.forceAt(x) }
+func (g *RadGrid) ForceAtR(pot PotentialOp[float64], x float64) float64 { return pot.ForceAt(x) }
 func (g *RadGrid) PotentialAtZ(pot PotentialOp[complex128], x complex128) complex128 {
-	return pot.evaluateAt(x)
+	return pot.EvaluateAt(x)
 }
 func (g *RadGrid) ForceAtZ(pot PotentialOp[complex128], x complex128) complex128 {
-	return pot.forceAt(x)
+	return pot.ForceAt(x)
 }
 
 func (g *RadGrid) PotentialOnGrid(pot PotentialOp[float64]) []float64 {
-	return pot.evaluateOnGrid(g.RValues())
+	return pot.EvaluateOnGrid(g.RValues())
 }
 func (g *RadGrid) ForceOnGrid(pot PotentialOp[float64]) []float64 {
-	return pot.forceOnGrid(g.RValues())
+	return pot.ForceOnGrid(g.RValues())
 }
 
 func (g *RadGrid) DisplayPotentialRe(Pot PotentialOp[float64], format string) {

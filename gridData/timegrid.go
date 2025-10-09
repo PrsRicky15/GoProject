@@ -125,7 +125,7 @@ func (t *TimeGrid) WValues() []float64 { return generateConjugatePoints(t) }
 func (t *TimeGrid) DisplayTimeGrid()   { displayGrid(t.TValues) }
 func (t *TimeGrid) DisplayOmegaGrid()  { displayGrid(t.WValues) }
 
-func (t *TimeGrid) PotentialAt(pot PotentialOp[float64], x float64) float64 { return pot.evaluateAt(x) }
+func (t *TimeGrid) PotentialAt(pot PotentialOp[float64], x float64) float64 { return pot.EvaluateAt(x) }
 
 func (t *TimeGrid) PrintPotentToFile(Pot PotentialOp[float64], filename string, format string) error {
 	err := functionToFile(t, Pot, filename, format, t.PotentialAt)

@@ -12,10 +12,10 @@ type VarType interface {
 
 // PotentialOp General interface for the evaluating the potential on a grid
 type PotentialOp[T VarType] interface {
-	evaluateAt(x T) T
-	evaluateOnGrid(x []T) []T
-	forceAt(x T) T
-	forceOnGrid(x []T) []T
+	EvaluateAt(x T) T
+	EvaluateOnGrid(x []T) []T
+	ForceAt(x T) T
+	ForceOnGrid(x []T) []T
 }
 
 // Made generic to work with VarType
@@ -38,7 +38,7 @@ func (m Morse[T]) String() string {
 	return fmt.Sprintf(" De [1 - Exp(-a(x - x0))]^2, where, De: %g, a: %g, x0: %g", m.De, m.Alpha, m.Cen)
 }
 
-func (m Morse[T]) evaluateAt(x T) T {
+func (m Morse[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -55,7 +55,7 @@ func (m Morse[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (m Morse[T]) forceAt(x T) T {
+func (m Morse[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -72,12 +72,12 @@ func (m Morse[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (m Morse[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(m.evaluateAt, x)
+func (m Morse[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(m.EvaluateAt, x)
 }
 
-func (m Morse[T]) forceOnGrid(x []T) []T {
-	return onGrid(m.forceAt, x)
+func (m Morse[T]) ForceOnGrid(x []T) []T {
+	return onGrid(m.ForceAt, x)
 }
 
 // MorseF64 For float64 specialization
@@ -121,7 +121,7 @@ func (sc SoftCore[T]) String() string {
 		sc.Charge, sc.Centre, sc.SoftParam*sc.SoftParam)
 }
 
-func (sc SoftCore[T]) evaluateAt(x T) T {
+func (sc SoftCore[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -138,7 +138,7 @@ func (sc SoftCore[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (sc SoftCore[T]) forceAt(x T) T {
+func (sc SoftCore[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -155,12 +155,12 @@ func (sc SoftCore[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (sc SoftCore[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(sc.evaluateAt, x)
+func (sc SoftCore[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(sc.EvaluateAt, x)
 }
 
-func (sc SoftCore[T]) forceOnGrid(x []T) []T {
-	return onGrid(sc.forceAt, x)
+func (sc SoftCore[T]) ForceOnGrid(x []T) []T {
+	return onGrid(sc.ForceAt, x)
 }
 
 // SoftCoreF64 For float64 specialization
@@ -203,7 +203,7 @@ func (g Gaussian[T]) String() string {
 		" Where v0 = %g, x0 = %v, sigma = %g", g.Strength, g.Cen, g.Sigma)
 }
 
-func (g Gaussian[T]) evaluateAt(x T) T {
+func (g Gaussian[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -220,7 +220,7 @@ func (g Gaussian[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (g Gaussian[T]) forceAt(x T) T {
+func (g Gaussian[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -237,12 +237,12 @@ func (g Gaussian[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (g Gaussian[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(g.evaluateAt, x)
+func (g Gaussian[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(g.EvaluateAt, x)
 }
 
-func (g Gaussian[T]) forceOnGrid(x []T) []T {
-	return onGrid(g.forceAt, x)
+func (g Gaussian[T]) ForceOnGrid(x []T) []T {
+	return onGrid(g.ForceAt, x)
 }
 
 func xBySigma(x float64, sigma float64) float64 {
@@ -290,7 +290,7 @@ func (mg MultiGaussian[T]) String() string {
 		mg.NumGauss, mg.Sigma, mg.Gap)
 }
 
-func (mg MultiGaussian[T]) evaluateAt(x T) T {
+func (mg MultiGaussian[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -307,7 +307,7 @@ func (mg MultiGaussian[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (mg MultiGaussian[T]) forceAt(x T) T {
+func (mg MultiGaussian[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -324,12 +324,12 @@ func (mg MultiGaussian[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (mg MultiGaussian[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(mg.evaluateAt, x)
+func (mg MultiGaussian[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(mg.EvaluateAt, x)
 }
 
-func (mg MultiGaussian[T]) forceOnGrid(x []T) []T {
-	return onGrid(mg.forceAt, x)
+func (mg MultiGaussian[T]) ForceOnGrid(x []T) []T {
+	return onGrid(mg.ForceAt, x)
 }
 
 type MultiGaussF64 MultiGaussian[float64]
@@ -441,7 +441,7 @@ func (sg SuperGaussian[T]) String() string {
 	return fmt.Sprintf("%g Exp[ ((x - %g)/ %g)^%v]", sg.Strength, sg.Cen, sg.Sigma, sg.Order)
 }
 
-func (sg SuperGaussian[T]) evaluateAt(x T) T {
+func (sg SuperGaussian[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -458,7 +458,7 @@ func (sg SuperGaussian[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (sg SuperGaussian[T]) forceAt(x T) T {
+func (sg SuperGaussian[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -475,12 +475,12 @@ func (sg SuperGaussian[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (sg SuperGaussian[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(sg.evaluateAt, x)
+func (sg SuperGaussian[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(sg.EvaluateAt, x)
 }
 
-func (sg SuperGaussian[T]) forceOnGrid(x []T) []T {
-	return onGrid(sg.forceAt, x)
+func (sg SuperGaussian[T]) ForceOnGrid(x []T) []T {
+	return onGrid(sg.ForceAt, x)
 }
 
 type SupGaussF64 SuperGaussian[float64]
@@ -519,7 +519,7 @@ type Harmonic[T VarType] struct {
 
 func (h Harmonic[T]) String() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
 
-func (h Harmonic[T]) evaluateAt(x T) T {
+func (h Harmonic[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -536,7 +536,7 @@ func (h Harmonic[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (h Harmonic[T]) forceAt(x T) T {
+func (h Harmonic[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -553,12 +553,12 @@ func (h Harmonic[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (h Harmonic[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(h.evaluateAt, x)
+func (h Harmonic[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(h.EvaluateAt, x)
 }
 
-func (h Harmonic[T]) forceOnGrid(x []T) []T {
-	return onGrid(h.forceAt, x)
+func (h Harmonic[T]) ForceOnGrid(x []T) []T {
+	return onGrid(h.ForceAt, x)
 }
 
 type HarmonicF64 Harmonic[float64]
@@ -626,7 +626,7 @@ func (p Polynomial[T]) String() string {
 	return result
 }
 
-func (p Polynomial[T]) evaluateAt(x T) T {
+func (p Polynomial[T]) EvaluateAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -643,7 +643,7 @@ func (p Polynomial[T]) evaluateAt(x T) T {
 	return result.(T)
 }
 
-func (p Polynomial[T]) forceAt(x T) T {
+func (p Polynomial[T]) ForceAt(x T) T {
 	var result any
 
 	switch any(x).(type) {
@@ -660,12 +660,12 @@ func (p Polynomial[T]) forceAt(x T) T {
 	return result.(T)
 }
 
-func (p Polynomial[T]) evaluateOnGrid(x []T) []T {
-	return onGrid(p.evaluateAt, x)
+func (p Polynomial[T]) EvaluateOnGrid(x []T) []T {
+	return onGrid(p.EvaluateAt, x)
 }
 
-func (p Polynomial[T]) forceOnGrid(x []T) []T {
-	return onGrid(p.forceAt, x)
+func (p Polynomial[T]) ForceOnGrid(x []T) []T {
+	return onGrid(p.ForceAt, x)
 }
 
 type PolynomialF64 Polynomial[float64]
