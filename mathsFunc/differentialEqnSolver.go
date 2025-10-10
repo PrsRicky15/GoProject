@@ -2,23 +2,38 @@ package mathsFunc
 
 import (
 	"GoProject/gridData"
+	"math"
 	"slices"
 
 	"gonum.org/v1/gonum/blas/blas64"
 )
 
-// ODESolver interface for different solving methods
+const (
+	maxIter   = 20
+	tolerance = 1e-7
+)
+
+// ODESolverExplicit interface for different solving methods
 // dx(t)/dt = f(x,t)
-type ODESolver interface {
-	NextStep(funcAtT, x, time float64) float64
-	NextStepOnGrid(funcAtT, x []float64, time float64)
+type ODESolverExplicit interface {
+	NextStepEx(funcAtT, x, time float64) float64
+	NextStepExOnGrid(funcAtT, x []float64, time float64)
+	Name() string
+}
+
+// ODESolverImplicit interface for different solving methods
+// dx(t)/dt = f(x,t)
+type ODESolverImplicit interface {
+	NextStepIm(funcAtT, x, time float64) float64
+	NextStepImOnGrid(funcAtT, x []float64, time float64)
 	Name() string
 }
 
 // EulerSolver implements the basic Euler method
 type EulerSolver struct {
-	tdFunc *gridData.TDPotentialOp
+	TdFunc gridData.TDPotentialOp
 	DeltaT float64
+	buff   []float64
 }
 
 func (e *EulerSolver) Name() string {
@@ -26,21 +41,28 @@ func (e *EulerSolver) Name() string {
 }
 
 func (e *EulerSolver) NextStep(xt, t float64) float64 {
-	return xt + (*e.tdFunc).EvaluateAt(xt, t)*e.DeltaT
+	return xt + (e.TdFunc).EvaluateAt(xt, t)*e.DeltaT
 }
 
 func (e *EulerSolver) NextStepOnGrid(xt []float64, t float64) {
-	result := (*e.tdFunc).EvaluateOnRGrid(xt, t)
+	nPoints := len(xt)
+	if nPoints != len(e.buff) {
+		e.buff = make([]float64, len(xt))
+	}
+
+	(e.TdFunc).EvaluateOnRGridInPlace(xt, e.buff, t)
 	blas64.Axpy(e.DeltaT,
-		blas64.Vector{N: len(result), Data: result, Inc: 1},
-		blas64.Vector{N: len(xt), Data: xt, Inc: 1},
+		blas64.Vector{N: nPoints, Data: e.buff, Inc: 1},
+		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
 	)
 }
 
 // HeunsSolver implements the basic Euler method
 type HeunsSolver struct {
-	tdFunc *gridData.TDPotentialOp
-	DeltaT float64
+	TdFunc    gridData.TDPotentialOp
+	DeltaT    float64
+	predictor []float64
+	fatXt     []float64
 }
 
 func (h *HeunsSolver) Name() string {
@@ -48,33 +70,81 @@ func (h *HeunsSolver) Name() string {
 }
 
 func (h *HeunsSolver) NextStep(xt, t float64) float64 {
-	k1 := (*h.tdFunc).EvaluateAt(xt, t)
-	xtPlusDt := xt + k1*h.DeltaT
-	return xt + 0.5*h.DeltaT*(k1+(*h.tdFunc).EvaluateAt(xtPlusDt, t+h.DeltaT))
+	fxt := (h.TdFunc).EvaluateAt(xt, t)
+	predictor := xt + fxt*h.DeltaT
+	return xt + 0.5*h.DeltaT*(fxt+(h.TdFunc).EvaluateAt(predictor, t+h.DeltaT))
 }
 
 func (h *HeunsSolver) NextStepOnGrid(xt []float64, t float64) {
-	K1 := (*h.tdFunc).EvaluateOnRGrid(xt, t)
-	xtPlusDt := slices.Clone(xt)
+
+	nPoints := len(xt)
+	if nPoints != len(h.fatXt) || nPoints != len(h.predictor) {
+		h.fatXt = make([]float64, len(xt))
+		h.predictor = make([]float64, len(xt))
+	}
+
+	(h.TdFunc).EvaluateOnRGridInPlace(xt, h.fatXt, t)
+	h.predictor = slices.Clone(xt)
 
 	blas64.Axpy(h.DeltaT,
+		blas64.Vector{N: nPoints, Data: h.fatXt, Inc: 1},
+		blas64.Vector{N: nPoints, Data: h.predictor, Inc: 1},
+	)
+
+	for i := range h.predictor {
+		h.fatXt[i] += (h.TdFunc).EvaluateAt(h.predictor[i], t+h.DeltaT)
+	}
+
+	blas64.Axpy(0.5*h.DeltaT,
+		blas64.Vector{N: nPoints, Data: h.fatXt, Inc: 1},
+		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
+	)
+}
+
+type MidPointSolver struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+}
+
+func (m *MidPointSolver) Name() string {
+	return "MidPoint Method (Implicit or Explicit)"
+}
+func (m *MidPointSolver) NextStep(xt, t float64) float64 {
+	xtMid := xt + (m.TdFunc).EvaluateAt(xt, t)*m.DeltaT/2
+	return xt + m.DeltaT*(m.TdFunc).EvaluateAt(xtMid, t+m.DeltaT/2)
+}
+
+func (m *MidPointSolver) NextStepOnGrid(xt []float64, t float64) {
+	K1 := (m.TdFunc).EvaluateOnRGrid(xt, t)
+	xtPlusDt := slices.Clone(xt)
+
+	blas64.Axpy(m.DeltaT/2,
 		blas64.Vector{N: len(K1), Data: K1, Inc: 1},
 		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
 	)
 
 	for i := range xtPlusDt {
-		K1[i] += (*h.tdFunc).EvaluateOnRGrid(xtPlusDt, t+h.DeltaT)[i]
+		K1[i] = (m.TdFunc).EvaluateOnRGrid(xtPlusDt, t+m.DeltaT/2)[i]
 	}
 
-	blas64.Axpy(0.5*h.DeltaT,
+	blas64.Axpy(m.DeltaT,
 		blas64.Vector{N: len(K1), Data: K1, Inc: 1},
 		blas64.Vector{N: len(xt), Data: xt, Inc: 1},
 	)
 }
 
+func (m *MidPointSolver) NextStepImplicit(xt, t float64) float64 {
+	xtMid := xt + (m.TdFunc).EvaluateAt(xt, t)*m.DeltaT/2
+	return xt + m.DeltaT*(m.TdFunc).EvaluateAt(xtMid, t+m.DeltaT/2)
+}
+
+func (m *MidPointSolver) NextStepOneGridImplicit(xt, t float64) float64 {
+	return xt + t
+}
+
 // RungeKutta4 implements the basic Euler method
 type RungeKutta4 struct {
-	tdFunc *gridData.TDPotentialOp
+	TdFunc gridData.TDPotentialOp
 	DeltaT float64
 }
 
@@ -84,30 +154,30 @@ func (rg *RungeKutta4) Name() string {
 
 func (rg *RungeKutta4) NextStep(xt, t float64) float64 {
 	halfDt := 0.5 * rg.DeltaT
-	k1 := (*rg.tdFunc).EvaluateAt(xt, t)
-	k2 := (*rg.tdFunc).EvaluateAt(xt+k1*halfDt, t+halfDt)
-	k3 := (*rg.tdFunc).EvaluateAt(xt+k2*halfDt, t+halfDt)
-	k4 := (*rg.tdFunc).EvaluateAt(xt+k3*rg.DeltaT, t+rg.DeltaT)
+	k1 := (rg.TdFunc).EvaluateAt(xt, t)
+	k2 := (rg.TdFunc).EvaluateAt(xt+k1*halfDt, t+halfDt)
+	k3 := (rg.TdFunc).EvaluateAt(xt+k2*halfDt, t+halfDt)
+	k4 := (rg.TdFunc).EvaluateAt(xt+k3*rg.DeltaT, t+rg.DeltaT)
 	return xt + rg.DeltaT/6.0*(k1+2*k2+2*k3+k4)
 }
 
 func (rg *RungeKutta4) NextStepOnGrid(xt []float64, t float64) {
 	halfDt := 0.5 * rg.DeltaT
-	k1 := (*rg.tdFunc).EvaluateOnRGrid(xt, t)
+	k1 := (rg.TdFunc).EvaluateOnRGrid(xt, t)
 
 	xtPlusDt := slices.Clone(xt)
 	blas64.Axpy(0.5*rg.DeltaT,
 		blas64.Vector{N: len(k1), Data: k1, Inc: 1},
 		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
 	)
-	k2 := (*rg.tdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
+	k2 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
 	xtPlusDt = slices.Clone(xt)
 	blas64.Axpy(0.5*rg.DeltaT,
 		blas64.Vector{N: len(k2), Data: k2, Inc: 1},
 		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
 	)
 
-	k3 := (*rg.tdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
+	k3 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
 
 	xtPlusDt = slices.Clone(xt)
 	blas64.Axpy(rg.DeltaT,
@@ -115,10 +185,155 @@ func (rg *RungeKutta4) NextStepOnGrid(xt []float64, t float64) {
 		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
 	)
 
-	k4 := (*rg.tdFunc).EvaluateOnRGrid(xtPlusDt, t+rg.DeltaT)
+	k4 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+rg.DeltaT)
 
 	Dtby6 := rg.DeltaT / 6
 	for i := range xtPlusDt {
 		xt[i] += Dtby6 * (k1[i] + 2*(k2[i]+k3[i]) + k4[i])
 	}
+}
+
+// HeunsIterSolver implements the Heuns iterative method
+type HeunsIterSolver struct {
+	TdFunc    gridData.TDPotentialOp
+	DeltaT    float64
+	fatXt     []float64
+	predictor []float64
+	corrector []float64
+	diff      []float64
+}
+
+func (hi *HeunsIterSolver) Name() string {
+	return "Heun's Iterative Method"
+}
+
+func (hi *HeunsIterSolver) NextStep(xt, t float64) float64 {
+	predictor := xt + hi.DeltaT*(hi.TdFunc).EvaluateAt(xt, t)
+	corrector := predictor
+
+	for i := 0; i < maxIter; i++ {
+		correctorNew := xt + 0.5*hi.DeltaT*((hi.TdFunc).EvaluateAt(xt, t)+
+			(hi.TdFunc).EvaluateAt(corrector, t+hi.DeltaT))
+
+		var err float64
+		if math.Abs(correctorNew) > 1e-10 {
+			err = math.Abs(correctorNew-corrector) / math.Abs(correctorNew)
+		} else {
+			err = math.Abs(correctorNew - corrector)
+		}
+
+		if err < tolerance {
+			return correctorNew
+		}
+
+		corrector = correctorNew
+	}
+	return corrector
+}
+
+func (hi *HeunsIterSolver) allocate(nPoints int) {
+
+	if nPoints != len(hi.corrector) ||
+		nPoints != len(hi.predictor) ||
+		nPoints != len(hi.fatXt) ||
+		nPoints != len(hi.diff) {
+
+		hi.corrector = make([]float64, nPoints)
+		hi.predictor = make([]float64, nPoints)
+		hi.fatXt = make([]float64, nPoints)
+		hi.diff = make([]float64, nPoints)
+	}
+
+}
+
+func (hi *HeunsIterSolver) iterate(xt []float64, t float64) float64 {
+	nPoints := len(xt)
+
+	for i := range hi.predictor {
+		hi.corrector[i] = hi.fatXt[i] + (hi.TdFunc).EvaluateAt(hi.predictor[i], t+hi.DeltaT)
+	}
+
+	hi.diff = slices.Clone(xt)
+	blas64.Axpy(0.5*hi.DeltaT,
+		blas64.Vector{N: nPoints, Data: hi.corrector, Inc: 1},
+		blas64.Vector{N: nPoints, Data: hi.diff, Inc: 1},
+	)
+
+	hi.corrector = slices.Clone(hi.diff)
+
+	for i := range hi.corrector {
+		hi.diff[i] -= hi.predictor[i]
+	}
+
+	hi.predictor = slices.Clone(hi.corrector)
+
+	return blas64.Nrm2(blas64.Vector{N: nPoints, Data: hi.diff, Inc: 1})
+}
+
+func (hi *HeunsIterSolver) NextStepOnGrid(xt []float64, t float64) {
+
+	nPoints := len(xt)
+	hi.allocate(nPoints)
+
+	(hi.TdFunc).EvaluateOnRGridInPlace(xt, hi.fatXt, t)
+	hi.predictor = slices.Clone(xt)
+
+	blas64.Axpy(hi.DeltaT,
+		blas64.Vector{N: nPoints, Data: hi.fatXt, Inc: 1},
+		blas64.Vector{N: nPoints, Data: hi.predictor, Inc: 1},
+	)
+
+	var err float64
+	for i := 0; i < maxIter; i++ {
+		err = hi.iterate(xt, t)
+		if err < tolerance {
+			break
+		}
+	}
+	xt = slices.Clone(hi.corrector)
+}
+
+// PredictorCorrector implements the basic Euler method
+type PredictorCorrector struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+}
+
+type MDodeSolver interface {
+	NextStep(forceAtT, x, v, time float64) float64
+	NextStepOnGrid(forceAtT, x, v []float64, time float64)
+	Name() string
+}
+
+type Verlet struct {
+	ForceFunc gridData.TDPotentialOp
+	Dt        float64
+}
+
+func (vi *Verlet) Name() string {
+	return "Verlet Integrators"
+}
+
+func (vi *Verlet) NextStep(xt, t float64) float64 {
+	return xt + t
+}
+
+type StormerVerlet struct {
+	ForceFunc gridData.TDPotentialOp
+	Dt        float64
+}
+
+type VelocityVerlet struct {
+	ForceFunc gridData.TDPotentialOp
+	Dt        float64
+}
+
+type LeapFrog struct {
+	ForceFunc gridData.TDPotentialOp
+	Dt        float64
+}
+
+type Beeman struct {
+	ForceFunc gridData.TDPotentialOp
+	Dt        float64
 }
