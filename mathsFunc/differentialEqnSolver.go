@@ -25,13 +25,13 @@ type ODESolverExplicit interface {
 // ODESolverImplicit interface for different solving methods
 // dx(t)/dt = f(x,t)
 type ODESolverImplicit interface {
-	NextStepIm(x, time float64) float64
-	NextStepImOnGrid(x []float64, time float64)
+	NextStepIm(x, time float64) (float64, error)
+	NextStepImOnGrid(x []float64, time float64) error
 }
 
 type ODESolverNewtonIm interface {
-	NextStepImNewton(x, time float64) float64
-	NextStepImOnGridNewton(x []float64, time float64)
+	NextStepImNewton(x, time float64) (float64, error)
+	NextStepImOnGridNewton(x []float64, time float64) error
 }
 
 // EulerSolver implements the basic Euler method
@@ -119,10 +119,9 @@ func (e *EulerSolver) NextStepImOnGrid(xt []float64, t float64) error {
 }
 
 func (e *EulerSolver) NextStepImNewton(xt, t float64) (float64, error) {
-	fxt := e.TdFunc.EvaluateAt(xt, t)
 	xNext := xt
 	for iter := 0; iter < maxIter; iter++ {
-		fxt = e.TdFunc.EvaluateAt(xNext, t+e.DeltaT)
+		fxt := e.TdFunc.EvaluateAt(xNext, t+e.DeltaT)
 		Gxt := xNext - (xt + e.DeltaT*fxt)
 
 		if math.Abs(Gxt) < tolerance {
@@ -142,17 +141,48 @@ func (e *EulerSolver) NextStepImNewton(xt, t float64) (float64, error) {
 	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (e *EulerSolver) NextStepImOnGridNewton(xt []float64, t float64) {
+func (e *EulerSolver) NextStepImOnGridNewton(xt []float64, t float64) error {
 	nPoints := len(xt)
-	if nPoints != len(e.fxt) {
-		e.fxt = make([]float64, len(xt))
-	}
+	e.allocate(nPoints)
+	e.xNew = slices.Clone(xt)
+	for iter := 0; iter < maxIter; iter++ {
+		e.TdFunc.EvaluateOnRGridInPlace(e.xNew, e.fxt, t+e.DeltaT)
 
-	(e.TdFunc).EvaluateOnRGridInPlace(xt, e.fxt, t)
-	blas64.Axpy(e.DeltaT,
-		blas64.Vector{N: nPoints, Data: e.fxt, Inc: 1},
-		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
-	)
+		e.xPre = slices.Clone(xt)
+		blas64.Axpy(e.DeltaT,
+			blas64.Vector{N: nPoints, Data: e.fxt, Inc: 1},
+			blas64.Vector{N: nPoints, Data: e.xPre, Inc: 1},
+		)
+
+		for i := range e.xNew {
+			e.diff[i] = e.xNew[i] - e.xPre[i]
+		}
+
+		residualNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: e.diff, Inc: 1})
+		if residualNorm < tolerance {
+			copy(xt, e.xNew)
+			return nil
+		}
+
+		for i := range e.xNew {
+			spaceDerivative := (e.TdFunc.EvaluateAt(e.xNew[i]+delta, t+e.DeltaT) - e.fxt[i]) / delta
+			e.xPre[i] = 1 - e.DeltaT*spaceDerivative
+		}
+
+		JacobianNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: e.xPre, Inc: 1})
+		if JacobianNorm < 1e-14 {
+			e.TdFunc.EvaluateOnRGridInPlace(xt, e.fxt, t+e.DeltaT)
+			for i := range e.xNew {
+				e.xNew[i] = xt[i] + e.DeltaT*e.fxt[i]
+			}
+			continue
+		}
+
+		for i := range e.xNew {
+			e.xNew[i] -= e.diff[i] / e.xPre[i]
+		}
+	}
+	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
 // HeunsSolver implements the basic Euler method
@@ -176,14 +206,14 @@ func (h *HeunsSolver) NextStepEx(xt, t float64) float64 {
 	return xt + 0.5*h.DeltaT*slope2
 }
 
-func (h *HeunsSolver) NextStepIm(xt, t float64) float64 {
+func (h *HeunsSolver) NextStepIm(xt, t float64) (float64, error) {
 	fxt := (h.TdFunc).EvaluateAt(xt, t)
 	predictor := xt + h.DeltaT*fxt
 	corrector := predictor
 
 	for i := 0; i < maxIter; i++ {
-		correctorNew := xt + 0.5*h.DeltaT*(fxt+
-			(h.TdFunc).EvaluateAt(corrector, t+h.DeltaT))
+		trapezoid := fxt + (h.TdFunc).EvaluateAt(corrector, t+h.DeltaT)
+		correctorNew := xt + 0.5*h.DeltaT*trapezoid
 
 		var err float64
 		if math.Abs(correctorNew) > 1e-10 {
@@ -193,12 +223,12 @@ func (h *HeunsSolver) NextStepIm(xt, t float64) float64 {
 		}
 
 		if err < tolerance {
-			return correctorNew
+			return correctorNew, nil
 		}
 
 		corrector = correctorNew
 	}
-	return corrector
+	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
 func (h *HeunsSolver) allocate(nPoints int) {
@@ -267,7 +297,7 @@ func (h *HeunsSolver) iterate(xt []float64, t float64) float64 {
 		blas64.Nrm2(blas64.Vector{N: nPoints, Data: h.predictor, Inc: 1})
 }
 
-func (h *HeunsSolver) NextStepImOnGrid(xt []float64, t float64) {
+func (h *HeunsSolver) NextStepImOnGrid(xt []float64, t float64) error {
 
 	nPoints := len(xt)
 	h.allocate(nPoints)
@@ -284,10 +314,11 @@ func (h *HeunsSolver) NextStepImOnGrid(xt []float64, t float64) {
 	for i := 0; i < maxIter; i++ {
 		err = h.iterate(xt, t)
 		if err < tolerance {
-			break
+			xt = slices.Clone(h.corrector)
+			return nil
 		}
 	}
-	xt = slices.Clone(h.corrector)
+	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
 type MidPointSolver struct {
