@@ -29,13 +29,175 @@ type ODESolverImplicit interface {
 	NextStepImOnGrid(x []float64, time float64) error
 }
 
-type ODESolverNewtonIm interface {
-	NextStepImNewton(x, time float64) (float64, error)
-	NextStepImOnGridNewton(x []float64, time float64) error
+type EulerExplicit struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+	fxt    []float64
 }
 
-// EulerSolver implements the basic Euler method
-type EulerSolver struct {
+func (eEx *EulerExplicit) Name() string {
+	return "Euler Explicit Method"
+}
+
+func (eEx *EulerExplicit) NextStepEx(xt, t float64) float64 {
+	fxt := (eEx.TdFunc).EvaluateAt(xt, t)
+	return xt + eEx.DeltaT*fxt
+}
+
+func (eEx *EulerExplicit) NextStepExOnGrid(xt []float64, t float64) {
+	nPoints := len(xt)
+	if nPoints != len(eEx.fxt) {
+		eEx.fxt = make([]float64, len(xt))
+	}
+
+	(eEx.TdFunc).EvaluateOnRGridInPlace(xt, eEx.fxt, t)
+	blas64.Axpy(eEx.DeltaT,
+		blas64.Vector{N: nPoints, Data: eEx.fxt, Inc: 1},
+		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
+	)
+}
+
+// HeunsExplicit HeunsImplicitFixPoint implements the basic Euler method
+type HeunsExplicit struct {
+	TdFunc    gridData.TDPotentialOp
+	DeltaT    float64
+	predictor []float64
+	corrector []float64
+	fxt       []float64
+}
+
+func (hEx *HeunsExplicit) Name() string {
+	return "Heun's Explicit Method (Improved Euler method)"
+}
+
+func (hEx *HeunsExplicit) NextStepEx(xt, t float64) float64 {
+	fxt := (hEx.TdFunc).EvaluateAt(xt, t)
+	predictor := xt + fxt*hEx.DeltaT
+	slope2 := fxt + (hEx.TdFunc).EvaluateAt(predictor, t+hEx.DeltaT)
+	return xt + 0.5*hEx.DeltaT*slope2
+}
+
+func (hEx *HeunsExplicit) PredictIni(xt, fxt, xP []float64) {
+	nPoints := len(xP)
+	xP = slices.Clone(xt)
+	vecFxt := blas64.Vector{N: nPoints, Data: fxt, Inc: 1}
+	xNew := blas64.Vector{N: nPoints, Data: xP, Inc: 1}
+	blas64.Axpy(hEx.DeltaT, vecFxt, xNew)
+}
+
+func (hEx *HeunsExplicit) NextStepExOnGrid(xt []float64, t float64) {
+	nPoints := len(xt)
+
+	if nPoints != len(hEx.predictor) {
+		hEx.predictor = make([]float64, nPoints)
+		hEx.corrector = make([]float64, nPoints)
+		hEx.fxt = make([]float64, nPoints)
+	}
+
+	(hEx.TdFunc).EvaluateOnRGridInPlace(xt, hEx.fxt, t)
+	hEx.PredictIni(xt, hEx.fxt, hEx.predictor)
+	(hEx.TdFunc).EvaluateOnRGridInPlace(hEx.predictor, hEx.corrector, t)
+
+	for i := range xt {
+		hEx.corrector[i] += hEx.fxt[i]
+	}
+
+	vecFxt := blas64.Vector{N: nPoints, Data: hEx.corrector, Inc: 1}
+	xNew := blas64.Vector{N: nPoints, Data: xt, Inc: 1}
+	blas64.Axpy(0.5*hEx.DeltaT, vecFxt, xNew)
+}
+
+type MidPointExplicit struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+	xtMid  []float64
+	slope  []float64
+}
+
+func (mEx *MidPointExplicit) Name() string {
+	return "MidPoint Explicit Method!"
+}
+
+func (mEx *MidPointExplicit) NextStepEx(xt, t float64) float64 {
+	xtMid := xt + (mEx.TdFunc).EvaluateAt(xt, t)*mEx.DeltaT/2
+	slope := (mEx.TdFunc).EvaluateAt(xtMid, t+mEx.DeltaT/2)
+	return xt + mEx.DeltaT*slope
+}
+
+func (mEx *MidPointExplicit) NextStepExOnGrid(xt []float64, t float64) {
+	nPoints := len(xt)
+
+	(mEx.TdFunc).EvaluateOnRGridInPlace(xt, mEx.slope, t)
+
+	mEx.xtMid = slices.Clone(xt)
+	blas64.Axpy(mEx.DeltaT/2,
+		blas64.Vector{N: nPoints, Data: mEx.slope, Inc: 1},
+		blas64.Vector{N: nPoints, Data: mEx.xtMid, Inc: 1},
+	)
+
+	for i := range mEx.xtMid {
+		mEx.slope[i] = (mEx.TdFunc).EvaluateOnRGrid(mEx.xtMid, t+mEx.DeltaT/2)[i]
+	}
+
+	blas64.Axpy(mEx.DeltaT,
+		blas64.Vector{N: nPoints, Data: mEx.slope, Inc: 1},
+		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
+	)
+}
+
+// RungeKutta4Explicit implements the basic Euler method
+type RungeKutta4Explicit struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+}
+
+func (rgEx *RungeKutta4Explicit) Name() string {
+	return "Runge Kutta order 4"
+}
+
+func (rgEx *RungeKutta4Explicit) NextStepEx(xt, t float64) float64 {
+	halfDt := 0.5 * rgEx.DeltaT
+	k1 := (rgEx.TdFunc).EvaluateAt(xt, t)
+	k2 := (rgEx.TdFunc).EvaluateAt(xt+k1*halfDt, t+halfDt)
+	k3 := (rgEx.TdFunc).EvaluateAt(xt+k2*halfDt, t+halfDt)
+	k4 := (rgEx.TdFunc).EvaluateAt(xt+k3*rgEx.DeltaT, t+rgEx.DeltaT)
+	return xt + rgEx.DeltaT/6.0*(k1+2*k2+2*k3+k4)
+}
+
+func (rgEx *RungeKutta4Explicit) NextStepExOnGrid(xt []float64, t float64) {
+	halfDt := 0.5 * rgEx.DeltaT
+	k1 := (rgEx.TdFunc).EvaluateOnRGrid(xt, t)
+
+	xtPlusDt := slices.Clone(xt)
+	blas64.Axpy(0.5*rgEx.DeltaT,
+		blas64.Vector{N: len(k1), Data: k1, Inc: 1},
+		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
+	)
+	k2 := (rgEx.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
+	xtPlusDt = slices.Clone(xt)
+	blas64.Axpy(0.5*rgEx.DeltaT,
+		blas64.Vector{N: len(k2), Data: k2, Inc: 1},
+		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
+	)
+
+	k3 := (rgEx.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
+
+	xtPlusDt = slices.Clone(xt)
+	blas64.Axpy(rgEx.DeltaT,
+		blas64.Vector{N: len(k3), Data: k3, Inc: 1},
+		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
+	)
+
+	k4 := (rgEx.TdFunc).EvaluateOnRGrid(xtPlusDt, t+rgEx.DeltaT)
+
+	Dtby6 := rgEx.DeltaT / 6
+	for i := range xtPlusDt {
+		xt[i] += Dtby6 * (k1[i] + 2*(k2[i]+k3[i]) + k4[i])
+	}
+}
+
+// EulerImplicitFixPoint implements the basic Euler method
+type EulerImplicitFixPoint struct {
 	TdFunc gridData.TDPotentialOp
 	DeltaT float64
 	fxt    []float64
@@ -44,21 +206,16 @@ type EulerSolver struct {
 	diff   []float64
 }
 
-func (e *EulerSolver) Name() string {
+func (eImFP *EulerImplicitFixPoint) Name() string {
 	return "Euler Method"
 }
 
-func (e *EulerSolver) NextStepEx(xt, t float64) float64 {
-	fxt := (e.TdFunc).EvaluateAt(xt, t)
-	return xt + e.DeltaT*fxt
-}
-
-func (e *EulerSolver) NextStepIm(xt, t float64) (float64, error) {
+func (eImFP *EulerImplicitFixPoint) NextStepIm(xt, t float64) (float64, error) {
 	xPre := xt
 
 	for iter := 0; iter < maxIter; iter++ {
-		fxt := e.TdFunc.EvaluateAt(xPre, t+e.DeltaT)
-		xNew := xt + e.DeltaT*fxt
+		fxt := eImFP.TdFunc.EvaluateAt(xPre, t+eImFP.DeltaT)
+		xNew := xt + eImFP.DeltaT*fxt
 
 		if math.Abs(xNew-xPre) <= tolerance {
 			return xNew, nil
@@ -69,70 +226,83 @@ func (e *EulerSolver) NextStepIm(xt, t float64) (float64, error) {
 	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (e *EulerSolver) NextStepExOnGrid(xt []float64, t float64) {
-	nPoints := len(xt)
-	if nPoints != len(e.fxt) {
-		e.fxt = make([]float64, len(xt))
-	}
-
-	(e.TdFunc).EvaluateOnRGridInPlace(xt, e.fxt, t)
-	blas64.Axpy(e.DeltaT,
-		blas64.Vector{N: nPoints, Data: e.fxt, Inc: 1},
-		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
-	)
-}
-
-func (e *EulerSolver) allocate(nPoints int) {
-	if nPoints != len(e.fxt) ||
-		nPoints != len(e.xNew) ||
-		nPoints != len(e.xPre) ||
-		nPoints != len(e.diff) {
-		e.fxt = make([]float64, nPoints)
-		e.xPre = make([]float64, nPoints)
-		e.xNew = make([]float64, nPoints)
-		e.diff = make([]float64, nPoints)
+func (eImFP *EulerImplicitFixPoint) allocate(nPoints int) {
+	if nPoints != len(eImFP.fxt) ||
+		nPoints != len(eImFP.xNew) ||
+		nPoints != len(eImFP.xPre) ||
+		nPoints != len(eImFP.diff) {
+		eImFP.fxt = make([]float64, nPoints)
+		eImFP.xPre = make([]float64, nPoints)
+		eImFP.xNew = make([]float64, nPoints)
+		eImFP.diff = make([]float64, nPoints)
 	}
 }
 
-func (e *EulerSolver) NextStepImOnGrid(xt []float64, t float64) error {
+func (eImFP *EulerImplicitFixPoint) NextStepImOnGrid(xt []float64, t float64) error {
 	nPoints := len(xt)
-	e.allocate(nPoints)
-	e.xPre = slices.Clone(xt)
+	eImFP.allocate(nPoints)
+	eImFP.xPre = slices.Clone(xt)
 
 	for iter := 0; iter < maxIter; iter++ {
-		(e.TdFunc).EvaluateOnRGridInPlace(e.xPre, e.fxt, t+e.DeltaT)
+		(eImFP.TdFunc).EvaluateOnRGridInPlace(eImFP.xPre, eImFP.fxt, t+eImFP.DeltaT)
 
-		for i := range e.xNew {
-			e.xNew[i] = xt[i] + e.DeltaT*e.fxt[i]
-			e.diff[i] = e.xNew[i] - e.xPre[i]
+		for i := range eImFP.xNew {
+			eImFP.xNew[i] = xt[i] + eImFP.DeltaT*eImFP.fxt[i]
+			eImFP.diff[i] = eImFP.xNew[i] - eImFP.xPre[i]
 		}
 
-		err := blas64.Nrm2(blas64.Vector{N: nPoints, Data: e.diff, Inc: 1})
+		err := blas64.Nrm2(blas64.Vector{N: nPoints, Data: eImFP.diff, Inc: 1})
 
 		if err <= tolerance {
-			copy(xt, e.xNew)
+			copy(xt, eImFP.xNew)
 			return nil
 		}
-		e.xPre = slices.Clone(e.xNew)
+		eImFP.xPre = slices.Clone(eImFP.xNew)
 	}
 	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (e *EulerSolver) NextStepImNewton(xt, t float64) (float64, error) {
+// EulerImplicitNewton EulerImplicitFixPoint implements the basic Euler method
+type EulerImplicitNewton struct {
+	TdFunc gridData.TDPotentialOp
+	DeltaT float64
+	fxt    []float64
+	xPre   []float64
+	xNew   []float64
+	diff   []float64
+}
+
+func (eImNw *EulerImplicitNewton) Name() string {
+	return "Euler Method"
+}
+
+func (eImNw *EulerImplicitNewton) allocate(nPoints int) {
+	if nPoints != len(eImNw.fxt) ||
+		nPoints != len(eImNw.xNew) ||
+		nPoints != len(eImNw.xPre) ||
+		nPoints != len(eImNw.diff) {
+		eImNw.fxt = make([]float64, nPoints)
+		eImNw.xPre = make([]float64, nPoints)
+		eImNw.xNew = make([]float64, nPoints)
+		eImNw.diff = make([]float64, nPoints)
+	}
+}
+
+func (eImNw *EulerImplicitNewton) NextStepIm(xt, t float64) (float64, error) {
 	xNext := xt
 	for iter := 0; iter < maxIter; iter++ {
-		fxt := e.TdFunc.EvaluateAt(xNext, t+e.DeltaT)
-		Gxt := xNext - (xt + e.DeltaT*fxt)
+		fxt := eImNw.TdFunc.EvaluateAt(xNext, t+eImNw.DeltaT)
+		Gxt := xNext - (xt + eImNw.DeltaT*fxt)
 
 		if math.Abs(Gxt) < tolerance {
 			return xNext, nil
 		}
 
-		derGxt := (e.TdFunc.EvaluateAt(xNext+delta, t+e.DeltaT) - fxt) / delta
-		jacobian := 1 - e.DeltaT*derGxt
+		derGxt := (eImNw.TdFunc.EvaluateAt(xNext+delta, t+eImNw.DeltaT) - fxt) / delta
+		jacobian := 1 - eImNw.DeltaT*derGxt
 
 		if math.Abs(jacobian) < 1e-14 {
-			xNext = xt + e.DeltaT*fxt
+			xNext = xt + eImNw.DeltaT*fxt
 			continue
 		}
 
@@ -141,52 +311,52 @@ func (e *EulerSolver) NextStepImNewton(xt, t float64) (float64, error) {
 	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (e *EulerSolver) NextStepImOnGridNewton(xt []float64, t float64) error {
+func (eImNw *EulerImplicitNewton) NextStepImOnGrid(xt []float64, t float64) error {
 	nPoints := len(xt)
-	e.allocate(nPoints)
-	e.xNew = slices.Clone(xt)
+	eImNw.allocate(nPoints)
+	eImNw.xNew = slices.Clone(xt)
 	for iter := 0; iter < maxIter; iter++ {
-		e.TdFunc.EvaluateOnRGridInPlace(e.xNew, e.fxt, t+e.DeltaT)
+		eImNw.TdFunc.EvaluateOnRGridInPlace(eImNw.xNew, eImNw.fxt, t+eImNw.DeltaT)
 
-		e.xPre = slices.Clone(xt)
-		blas64.Axpy(e.DeltaT,
-			blas64.Vector{N: nPoints, Data: e.fxt, Inc: 1},
-			blas64.Vector{N: nPoints, Data: e.xPre, Inc: 1},
+		eImNw.xPre = slices.Clone(xt)
+		blas64.Axpy(eImNw.DeltaT,
+			blas64.Vector{N: nPoints, Data: eImNw.fxt, Inc: 1},
+			blas64.Vector{N: nPoints, Data: eImNw.xPre, Inc: 1},
 		)
 
-		for i := range e.xNew {
-			e.diff[i] = e.xNew[i] - e.xPre[i]
+		for i := range eImNw.xNew {
+			eImNw.diff[i] = eImNw.xNew[i] - eImNw.xPre[i]
 		}
 
-		residualNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: e.diff, Inc: 1})
+		residualNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: eImNw.diff, Inc: 1})
 		if residualNorm < tolerance {
-			copy(xt, e.xNew)
+			copy(xt, eImNw.xNew)
 			return nil
 		}
 
-		for i := range e.xNew {
-			spaceDerivative := (e.TdFunc.EvaluateAt(e.xNew[i]+delta, t+e.DeltaT) - e.fxt[i]) / delta
-			e.xPre[i] = 1 - e.DeltaT*spaceDerivative
+		for i := range eImNw.xNew {
+			spaceDerivative := (eImNw.TdFunc.EvaluateAt(eImNw.xNew[i]+delta, t+eImNw.DeltaT) - eImNw.fxt[i]) / delta
+			eImNw.xPre[i] = 1 - eImNw.DeltaT*spaceDerivative
 		}
 
-		JacobianNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: e.xPre, Inc: 1})
+		JacobianNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: eImNw.xPre, Inc: 1})
 		if JacobianNorm < 1e-14 {
-			e.TdFunc.EvaluateOnRGridInPlace(xt, e.fxt, t+e.DeltaT)
-			for i := range e.xNew {
-				e.xNew[i] = xt[i] + e.DeltaT*e.fxt[i]
+			eImNw.TdFunc.EvaluateOnRGridInPlace(xt, eImNw.fxt, t+eImNw.DeltaT)
+			for i := range eImNw.xNew {
+				eImNw.xNew[i] = xt[i] + eImNw.DeltaT*eImNw.fxt[i]
 			}
 			continue
 		}
 
-		for i := range e.xNew {
-			e.xNew[i] -= e.diff[i] / e.xPre[i]
+		for i := range eImNw.xNew {
+			eImNw.xNew[i] -= eImNw.diff[i] / eImNw.xPre[i]
 		}
 	}
 	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-// HeunsSolver implements the basic Euler method
-type HeunsSolver struct {
+// HeunsImplicitFixPoint implements the basic Euler method
+type HeunsImplicitFixPoint struct {
 	TdFunc    gridData.TDPotentialOp
 	DeltaT    float64
 	predictor []float64
@@ -196,55 +366,26 @@ type HeunsSolver struct {
 	diff      []float64
 }
 
-func (h *HeunsSolver) Name() string {
+func (hIm *HeunsImplicitFixPoint) Name() string {
 	return "Heun's Method (Improved Euler method)"
 }
 
-func (h *HeunsSolver) NextStepEx(xt, t float64) float64 {
-	fxt := (h.TdFunc).EvaluateAt(xt, t)
-	predictor := xt + fxt*h.DeltaT
-	slope2 := fxt + (h.TdFunc).EvaluateAt(predictor, t+h.DeltaT)
-	return xt + 0.5*h.DeltaT*slope2
-}
-
-func (h *HeunsSolver) PredictIni(xt, fxt, xP []float64) {
+func (hIm *HeunsImplicitFixPoint) PredictIni(xt, fxt, xP []float64) {
 	nPoints := len(xP)
 	xP = slices.Clone(xt)
 	vecFxt := blas64.Vector{N: nPoints, Data: fxt, Inc: 1}
 	xNew := blas64.Vector{N: nPoints, Data: xP, Inc: 1}
-	blas64.Axpy(h.DeltaT, vecFxt, xNew)
+	blas64.Axpy(hIm.DeltaT, vecFxt, xNew)
 }
 
-func (h *HeunsSolver) NextStepExOnGrid(xt []float64, t float64) {
-	nPoints := len(xt)
-
-	if nPoints != len(h.predictor) {
-		h.predictor = make([]float64, nPoints)
-		h.corrector = make([]float64, nPoints)
-		h.fxt = make([]float64, nPoints)
-	}
-
-	(h.TdFunc).EvaluateOnRGridInPlace(xt, h.fxt, t)
-	h.PredictIni(xt, h.fxt, h.predictor)
-	(h.TdFunc).EvaluateOnRGridInPlace(h.predictor, h.corrector, t)
-
-	for i := range xt {
-		h.corrector[i] += h.fxt[i]
-	}
-
-	vecFxt := blas64.Vector{N: nPoints, Data: h.corrector, Inc: 1}
-	xNew := blas64.Vector{N: nPoints, Data: xt, Inc: 1}
-	blas64.Axpy(0.5*h.DeltaT, vecFxt, xNew)
-}
-
-func (h *HeunsSolver) NextStepIm(xt, t float64) (float64, error) {
-	fxt := (h.TdFunc).EvaluateAt(xt, t)
-	predictor := xt + h.DeltaT*fxt
+func (hIm *HeunsImplicitFixPoint) NextStepIm(xt, t float64) (float64, error) {
+	fxt := (hIm.TdFunc).EvaluateAt(xt, t)
+	predictor := xt + hIm.DeltaT*fxt
 	corrector := predictor
 
 	for i := 0; i < maxIter; i++ {
-		trapezoid := fxt + (h.TdFunc).EvaluateAt(corrector, t+h.DeltaT)
-		correctorNew := xt + 0.5*h.DeltaT*trapezoid
+		trapezoid := fxt + (hIm.TdFunc).EvaluateAt(corrector, t+hIm.DeltaT)
+		correctorNew := xt + 0.5*hIm.DeltaT*trapezoid
 
 		var err float64
 		if math.Abs(correctorNew) > 1e-10 {
@@ -262,15 +403,97 @@ func (h *HeunsSolver) NextStepIm(xt, t float64) (float64, error) {
 	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (h *HeunsSolver) NextStepImNewton(xt, t float64) (float64, error) {
-	halfDt := 0.5 * h.DeltaT
-	xPre := xt
-	fxt := (h.TdFunc).EvaluateAt(xt, t)
+func (hIm *HeunsImplicitFixPoint) allocate(nPoints int) {
+
+	if nPoints != len(hIm.corrector) ||
+		nPoints != len(hIm.predictor) ||
+		nPoints != len(hIm.fxt) ||
+		nPoints != len(hIm.diff) {
+
+		hIm.corrector = make([]float64, nPoints)
+		hIm.predictor = make([]float64, nPoints)
+		hIm.fxt = make([]float64, nPoints)
+		hIm.diff = make([]float64, nPoints)
+	}
+
+}
+
+func (hIm *HeunsImplicitFixPoint) iterate(xt, fxt, predictCorrect []float64, t float64) float64 {
+	nPoints := len(xt)
+
+	for i := range predictCorrect {
+		hIm.corrector[i] = fxt[i] + (hIm.TdFunc).EvaluateAt(predictCorrect[i], t+hIm.DeltaT)
+	}
+	trapezoidal := blas64.Vector{N: nPoints, Data: hIm.corrector, Inc: 1}
+
+	hIm.diff = slices.Clone(xt)
+	xtNew := blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1}
+	blas64.Axpy(0.5*hIm.DeltaT, trapezoidal, xtNew)
+
+	hIm.corrector = slices.Clone(hIm.diff)
+
+	for i := range hIm.corrector {
+		hIm.diff[i] -= predictCorrect[i]
+	}
+
+	predictCorrect = slices.Clone(hIm.corrector)
+
+	diffVec := blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1}
+	correct := blas64.Vector{N: nPoints, Data: predictCorrect, Inc: 1}
+
+	return blas64.Nrm2(diffVec) / blas64.Nrm2(correct)
+}
+
+func (hIm *HeunsImplicitFixPoint) NextStepImOnGrid(xt []float64, t float64) error {
+	nPoints := len(xt)
+	hIm.allocate(nPoints)
+	(hIm.TdFunc).EvaluateOnRGridInPlace(xt, hIm.fxt, t)
+
+	hIm.PredictIni(xt, hIm.fxt, hIm.predictor)
+
+	var err float64
 	for i := 0; i < maxIter; i++ {
-		fNew := (h.TdFunc).EvaluateAt(xPre, t+h.DeltaT)
+		err = hIm.iterate(xt, hIm.fxt, hIm.predictor, t)
+		if err < tolerance {
+			xt = slices.Clone(hIm.predictor)
+			return nil
+		}
+	}
+	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
+}
+
+// HeunsImplicitNewton implements the basic Euler method
+type HeunsImplicitNewton struct {
+	TdFunc    gridData.TDPotentialOp
+	DeltaT    float64
+	predictor []float64
+	corrector []float64
+	fxt       []float64
+	jacobian  []float64
+	diff      []float64
+}
+
+func (hIm *HeunsImplicitNewton) Name() string {
+	return "Heun's Method (Improved Euler method)"
+}
+
+func (hIm *HeunsImplicitNewton) PredictIni(xt, fxt, xP []float64) {
+	nPoints := len(xP)
+	xP = slices.Clone(xt)
+	vecFxt := blas64.Vector{N: nPoints, Data: fxt, Inc: 1}
+	xNew := blas64.Vector{N: nPoints, Data: xP, Inc: 1}
+	blas64.Axpy(hIm.DeltaT, vecFxt, xNew)
+}
+
+func (hIm *HeunsImplicitNewton) NextStepIm(xt, t float64) (float64, error) {
+	halfDt := 0.5 * hIm.DeltaT
+	xPre := xt
+	fxt := (hIm.TdFunc).EvaluateAt(xt, t)
+	for i := 0; i < maxIter; i++ {
+		fNew := (hIm.TdFunc).EvaluateAt(xPre, t+hIm.DeltaT)
 		Gx := xPre - xt - halfDt*(fxt+fNew)
 
-		fxPDel := (h.TdFunc).EvaluateAt(xPre+delta, t+h.DeltaT)
+		fxPDel := (hIm.TdFunc).EvaluateAt(xPre+delta, t+hIm.DeltaT)
 		derFxt := (fxPDel - fNew) / delta
 		Jacobian := 1 - halfDt*derFxt
 
@@ -292,114 +515,55 @@ func (h *HeunsSolver) NextStepImNewton(xt, t float64) (float64, error) {
 	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (h *HeunsSolver) allocateFixPoint(nPoints int) {
+func (hIm *HeunsImplicitNewton) allocate(nPoints int) {
 
-	if nPoints != len(h.corrector) ||
-		nPoints != len(h.predictor) ||
-		nPoints != len(h.fxt) ||
-		nPoints != len(h.diff) {
+	if nPoints != len(hIm.corrector) ||
+		nPoints != len(hIm.predictor) ||
+		nPoints != len(hIm.fxt) ||
+		nPoints != len(hIm.diff) ||
+		nPoints != len(hIm.jacobian) {
 
-		h.corrector = make([]float64, nPoints)
-		h.predictor = make([]float64, nPoints)
-		h.fxt = make([]float64, nPoints)
-		h.diff = make([]float64, nPoints)
+		hIm.corrector = make([]float64, nPoints)
+		hIm.predictor = make([]float64, nPoints)
+		hIm.fxt = make([]float64, nPoints)
+		hIm.jacobian = make([]float64, nPoints)
+		hIm.diff = make([]float64, nPoints)
 	}
 
 }
 
-func (h *HeunsSolver) iterate(xt, fxt, predictCorrect []float64, t float64) float64 {
+func (hIm *HeunsImplicitNewton) NextStepImOnGrid(xt []float64, t float64) error {
 	nPoints := len(xt)
+	hIm.allocate(nPoints)
 
-	for i := range predictCorrect {
-		h.corrector[i] = fxt[i] + (h.TdFunc).EvaluateAt(predictCorrect[i], t+h.DeltaT)
-	}
-	trapezoidal := blas64.Vector{N: nPoints, Data: h.corrector, Inc: 1}
-
-	h.diff = slices.Clone(xt)
-	xtNew := blas64.Vector{N: nPoints, Data: h.diff, Inc: 1}
-	blas64.Axpy(0.5*h.DeltaT, trapezoidal, xtNew)
-
-	h.corrector = slices.Clone(h.diff)
-
-	for i := range h.corrector {
-		h.diff[i] -= predictCorrect[i]
-	}
-
-	predictCorrect = slices.Clone(h.corrector)
-
-	diffVec := blas64.Vector{N: nPoints, Data: h.diff, Inc: 1}
-	correct := blas64.Vector{N: nPoints, Data: predictCorrect, Inc: 1}
-
-	return blas64.Nrm2(diffVec) / blas64.Nrm2(correct)
-}
-
-func (h *HeunsSolver) NextStepImOnGrid(xt []float64, t float64) error {
-	nPoints := len(xt)
-	h.allocateFixPoint(nPoints)
-	(h.TdFunc).EvaluateOnRGridInPlace(xt, h.fxt, t)
-
-	h.PredictIni(xt, h.fxt, h.predictor)
-
-	var err float64
-	for i := 0; i < maxIter; i++ {
-		err = h.iterate(xt, h.fxt, h.predictor, t)
-		if err < tolerance {
-			xt = slices.Clone(h.predictor)
-			return nil
-		}
-	}
-	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
-}
-
-func (h *HeunsSolver) allocateNewton(nPoints int) {
-
-	if nPoints != len(h.corrector) ||
-		nPoints != len(h.predictor) ||
-		nPoints != len(h.fxt) ||
-		nPoints != len(h.diff) ||
-		nPoints != len(h.jacobian) {
-
-		h.corrector = make([]float64, nPoints)
-		h.predictor = make([]float64, nPoints)
-		h.fxt = make([]float64, nPoints)
-		h.jacobian = make([]float64, nPoints)
-		h.diff = make([]float64, nPoints)
-	}
-
-}
-
-func (h *HeunsSolver) NextStepImOnGridNewton(xt []float64, t float64) error {
-	nPoints := len(xt)
-	h.allocateNewton(nPoints)
-
-	halfDt := 0.5 * h.DeltaT
-	(h.TdFunc).EvaluateOnRGridInPlace(xt, h.fxt, t)
-	h.PredictIni(xt, h.fxt, h.predictor)
+	halfDt := 0.5 * hIm.DeltaT
+	(hIm.TdFunc).EvaluateOnRGridInPlace(xt, hIm.fxt, t)
+	hIm.PredictIni(xt, hIm.fxt, hIm.predictor)
 
 	for i := 0; i < maxIter; i++ {
-		(h.TdFunc).EvaluateOnRGridInPlace(h.predictor, h.diff, t+h.DeltaT)
+		(hIm.TdFunc).EvaluateOnRGridInPlace(hIm.predictor, hIm.diff, t+hIm.DeltaT)
 
-		for j := range h.predictor {
-			h.diff[j] += h.fxt[j]
+		for j := range hIm.predictor {
+			hIm.diff[j] += hIm.fxt[j]
 		}
 
-		h.corrector = slices.Clone(xt)
-		trapezoid := blas64.Vector{N: nPoints, Data: h.diff, Inc: 1}
-		newXt := blas64.Vector{N: nPoints, Data: h.corrector, Inc: 1}
+		hIm.corrector = slices.Clone(xt)
+		trapezoid := blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1}
+		newXt := blas64.Vector{N: nPoints, Data: hIm.corrector, Inc: 1}
 		blas64.Axpy(halfDt, trapezoid, newXt)
 
 		// Gx := xPre - xt - halfDt*(fxt+fNew)
-		for j := range h.predictor {
-			h.diff[j] = h.predictor[j] - h.corrector[j]
-			fxCenter := (h.TdFunc).EvaluateAt(h.predictor[j], t+h.DeltaT)
-			fxPDel := (h.TdFunc).EvaluateAt(h.predictor[j]+delta, t+h.DeltaT)
+		for j := range hIm.predictor {
+			hIm.diff[j] = hIm.predictor[j] - hIm.corrector[j]
+			fxCenter := (hIm.TdFunc).EvaluateAt(hIm.predictor[j], t+hIm.DeltaT)
+			fxPDel := (hIm.TdFunc).EvaluateAt(hIm.predictor[j]+delta, t+hIm.DeltaT)
 			derFxt := (fxPDel - fxCenter) / delta
-			h.jacobian[j] = 1 - halfDt*derFxt
+			hIm.jacobian[j] = 1 - halfDt*derFxt
 		}
 
 		singular := false
-		for j := range h.jacobian {
-			if math.Abs(h.jacobian[j]) < 1e-10 {
+		for j := range hIm.jacobian {
+			if math.Abs(hIm.jacobian[j]) < 1e-10 {
 				singular = true
 				break
 			}
@@ -408,126 +572,92 @@ func (h *HeunsSolver) NextStepImOnGridNewton(xt []float64, t float64) error {
 			return fmt.Errorf("singular Jacobian at iteration %d", i)
 		}
 
-		for j := range h.predictor {
-			h.corrector[j] = h.predictor[j] - h.diff[j]/h.jacobian[j]
+		for j := range hIm.predictor {
+			hIm.corrector[j] = hIm.predictor[j] - hIm.diff[j]/hIm.jacobian[j]
 		}
 
-		xNew := blas64.Nrm2(blas64.Vector{N: nPoints, Data: h.corrector, Inc: 1})
+		xNew := blas64.Nrm2(blas64.Vector{N: nPoints, Data: hIm.corrector, Inc: 1})
 		if math.IsNaN(xNew) || math.IsInf(xNew, 0) {
 			return fmt.Errorf("newton iteration produced invalid value at iteration %d", i)
 		}
 
-		for k := range h.predictor {
-			h.diff[k] = h.corrector[k] - h.predictor[k]
+		for k := range hIm.predictor {
+			hIm.diff[k] = hIm.corrector[k] - hIm.predictor[k]
 		}
 
-		diffNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: h.diff, Inc: 1})
+		diffNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1})
 
 		if diffNorm < tolerance {
-			copy(xt, h.corrector)
+			copy(xt, hIm.corrector)
 			return nil
 		}
-		h.predictor = slices.Clone(h.corrector)
+		hIm.predictor = slices.Clone(hIm.corrector)
 	}
 
-	copy(xt, h.corrector)
+	copy(xt, hIm.corrector)
 	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-type MidPointSolver struct {
+type MidPointImplicitFixPoint struct {
 	TdFunc gridData.TDPotentialOp
 	DeltaT float64
 	xtMid  []float64
 	slope  []float64
 }
 
-func (m *MidPointSolver) Name() string {
-	return "MidPoint Method (Implicit or Explicit)"
+func (m *MidPointImplicitFixPoint) Name() string {
+	return "MidPoint Implicit with Fix-Point Method"
 }
 
-func (m *MidPointSolver) NextStepEx(xt, t float64) float64 {
-	xtMid := xt + (m.TdFunc).EvaluateAt(xt, t)*m.DeltaT/2
-	slope := (m.TdFunc).EvaluateAt(xtMid, t+m.DeltaT/2)
-	return xt + m.DeltaT*slope
-}
+func (m *MidPointImplicitFixPoint) NextStepIm(xt, t float64) (float64, error) {
+	tMid := t + m.DeltaT/2
+	xPre := xt
+	var xNext float64
+	for iter := 0; iter < maxIter; iter++ {
+		xMid := 0.5 * (xt + xPre)
+		funcMid := m.TdFunc.EvaluateAt(xMid, tMid)
+		xNext = xt + m.DeltaT*funcMid
 
-func (m *MidPointSolver) NextStepExOnGrid(xt []float64, t float64) {
-	nPoints := len(xt)
-
-	(m.TdFunc).EvaluateOnRGridInPlace(xt, m.slope, t)
-
-	m.xtMid = slices.Clone(xt)
-	blas64.Axpy(m.DeltaT/2,
-		blas64.Vector{N: nPoints, Data: m.slope, Inc: 1},
-		blas64.Vector{N: nPoints, Data: m.xtMid, Inc: 1},
-	)
-
-	for i := range m.xtMid {
-		m.slope[i] = (m.TdFunc).EvaluateOnRGrid(m.xtMid, t+m.DeltaT/2)[i]
+		if math.Abs(xNext-xPre) < tolerance {
+			return xNext, nil
+		}
+		xPre = xNext
 	}
-
-	blas64.Axpy(m.DeltaT,
-		blas64.Vector{N: nPoints, Data: m.slope, Inc: 1},
-		blas64.Vector{N: nPoints, Data: xt, Inc: 1},
-	)
+	return xt, fmt.Errorf("implicit fix point step timed out! Maximum Iterations: %d", maxIter)
 }
 
-func (m *MidPointSolver) NextStepIm(xt, t float64) float64 {
-	xtMid := xt + (m.TdFunc).EvaluateAt(xt, t)*m.DeltaT/2
-	return xt + m.DeltaT*(m.TdFunc).EvaluateAt(xtMid, t+m.DeltaT/2)
-}
+func (m *MidPointImplicitFixPoint) NextStepImOnGrid(xt []float64, t float64) {}
 
-func (m *MidPointSolver) NextStepImOnGrid(xt []float64, t float64) {}
-
-// RungeKutta4 implements the basic Euler method
-type RungeKutta4 struct {
+type MidPointImplicitNewton struct {
 	TdFunc gridData.TDPotentialOp
 	DeltaT float64
+	xtMid  []float64
+	slope  []float64
 }
 
-func (rg *RungeKutta4) Name() string {
-	return "Runge Kutta order 4"
+func (m *MidPointImplicitNewton) Name() string {
+	return "MidPoint Implicit with Newton-Raphson Method"
 }
 
-func (rg *RungeKutta4) NextStepEx(xt, t float64) float64 {
-	halfDt := 0.5 * rg.DeltaT
-	k1 := (rg.TdFunc).EvaluateAt(xt, t)
-	k2 := (rg.TdFunc).EvaluateAt(xt+k1*halfDt, t+halfDt)
-	k3 := (rg.TdFunc).EvaluateAt(xt+k2*halfDt, t+halfDt)
-	k4 := (rg.TdFunc).EvaluateAt(xt+k3*rg.DeltaT, t+rg.DeltaT)
-	return xt + rg.DeltaT/6.0*(k1+2*k2+2*k3+k4)
-}
+func (m *MidPointImplicitNewton) NextStepIm(xt, t float64) (float64, error) {
+	halfDt := m.DeltaT / 2
+	tMid := t + halfDt
+	xNext := xt
+	for iter := 0; iter < maxIter; iter++ {
+		xMid := (xt + xNext) / 2
+		fMid := m.TdFunc.EvaluateAt(xMid, tMid)
 
-func (rg *RungeKutta4) NextStepExOnGrid(xt []float64, t float64) {
-	halfDt := 0.5 * rg.DeltaT
-	k1 := (rg.TdFunc).EvaluateOnRGrid(xt, t)
+		Gx := xNext - xt - m.DeltaT*fMid
+		if math.Abs(Gx) < tolerance {
+			return xNext, nil
+		}
 
-	xtPlusDt := slices.Clone(xt)
-	blas64.Axpy(0.5*rg.DeltaT,
-		blas64.Vector{N: len(k1), Data: k1, Inc: 1},
-		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
-	)
-	k2 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
-	xtPlusDt = slices.Clone(xt)
-	blas64.Axpy(0.5*rg.DeltaT,
-		blas64.Vector{N: len(k2), Data: k2, Inc: 1},
-		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
-	)
-
-	k3 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+halfDt)
-
-	xtPlusDt = slices.Clone(xt)
-	blas64.Axpy(rg.DeltaT,
-		blas64.Vector{N: len(k3), Data: k3, Inc: 1},
-		blas64.Vector{N: len(xtPlusDt), Data: xtPlusDt, Inc: 1},
-	)
-
-	k4 := (rg.TdFunc).EvaluateOnRGrid(xtPlusDt, t+rg.DeltaT)
-
-	Dtby6 := rg.DeltaT / 6
-	for i := range xtPlusDt {
-		xt[i] += Dtby6 * (k1[i] + 2*(k2[i]+k3[i]) + k4[i])
+		fPlus := m.TdFunc.EvaluateAt(xMid+delta, tMid)
+		dFbydx := (fPlus - fMid) / delta
+		jacobian := 1 - halfDt*dFbydx
+		xNext -= Gx / jacobian
 	}
+	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
 // PredictorCorrector implements the basic Euler method
