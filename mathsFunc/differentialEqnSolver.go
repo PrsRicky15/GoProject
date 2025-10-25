@@ -220,6 +220,282 @@ func (mEx *MidPointExplicit) NextStepOnGrid(xt []float64, t float64) error {
 	return nil
 }
 
+type Ralston2order struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	dt2by3 float64
+	dt1by4 float64
+	dt3by4 float64
+
+	xtMid blas64.Vector
+	fxt   blas64.Vector
+}
+
+func (rEx2 *Ralston2order) Name() string {
+	return "Second order Ralston Explicit Method!"
+}
+
+func (rEx2 *Ralston2order) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *Ralston2order {
+	return &Ralston2order{
+		timeFunc: tdFunc,
+		delTime:  dt,
+		dt2by3:   (2. * dt) / 3.,
+		dt1by4:   dt / 4.,
+		dt3by4:   (3. * dt) / 4.,
+	}
+}
+
+func (rEx2 *Ralston2order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	rEx2.delTime = dt
+	rEx2.timeFunc = tdFunc
+	rEx2.dt1by4 = dt / 4.
+	rEx2.dt2by3 = (2. * dt) / 3.
+	rEx2.dt3by4 = (3. * dt) / 4.
+}
+
+func (rEx2 *Ralston2order) NextStep(xt, t float64) (float64, error) {
+	k1 := rEx2.timeFunc.EvaluateAt(xt, t)
+	k2 := rEx2.timeFunc.EvaluateAt(xt+rEx2.dt2by3*k1, t+rEx2.dt2by3)
+	return xt + k1*rEx2.dt1by4 + k2*rEx2.dt3by4, nil
+}
+
+// Ralston3Order need to be completed
+type Ralston3Order struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	halfDt     float64
+	threeBy4Dt float64
+	dtBy9      float64
+
+	xtMid blas64.Vector
+	fxt   blas64.Vector
+}
+
+func (rEx *Ralston3Order) Name() string {
+	return "Third order Ralston Explicit Method!"
+}
+
+func (rEx *Ralston3Order) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *Ralston3Order {
+	return &Ralston3Order{
+		timeFunc:   tdFunc,
+		delTime:    dt,
+		halfDt:     dt / 2.,
+		threeBy4Dt: 0.75 * dt,
+		dtBy9:      dt / 9.,
+	}
+}
+
+func (rEx *Ralston3Order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	rEx.delTime = dt
+	rEx.timeFunc = tdFunc
+	rEx.halfDt = dt / 2
+	rEx.threeBy4Dt = 0.75 * dt
+	rEx.dtBy9 = dt / 9.
+}
+
+func (rEx *Ralston3Order) NextStep(xt, t float64) (float64, error) {
+	k1 := rEx.timeFunc.EvaluateAt(xt, t)
+	k2 := rEx.timeFunc.EvaluateAt(xt+rEx.halfDt*k1, t+rEx.halfDt)
+	k3 := rEx.timeFunc.EvaluateAt(xt+rEx.threeBy4Dt*k1, t+rEx.threeBy4Dt)
+	return xt + rEx.dtBy9*(2*k1+3*k2+4*k3), nil
+}
+
+func (rEx *Ralston3Order) NextStepOnGrid(xt []float64, t float64) error {
+	nPoints := len(xt)
+
+	// Allocate buffers only if necessary
+	if nPoints != rEx.fxt.N {
+		rEx.fxt = blas64.Vector{N: nPoints, Data: make([]float64, nPoints), Inc: 1}
+		rEx.xtMid = blas64.Vector{N: nPoints, Data: make([]float64, nPoints), Inc: 1}
+	}
+
+	// Compute xtMid = xt + halfDt * f(xt, t)
+	rEx.timeFunc.EvaluateOnRGridInPlace(xt, rEx.fxt.Data, t)
+	copy(rEx.xtMid.Data, xt)
+	blas64.Axpy(rEx.halfDt, rEx.fxt, rEx.xtMid)
+
+	// Compute f(xtMid, t + halfDt)
+	rEx.timeFunc.EvaluateOnRGridInPlace(rEx.xtMid.Data, rEx.fxt.Data, t+rEx.halfDt)
+
+	for i := 0; i < nPoints; i++ {
+		if math.IsNaN(rEx.fxt.Data[i]) || math.IsInf(rEx.fxt.Data[i], 0) {
+			return fmt.Errorf("the fxt is not valid")
+		}
+	}
+
+	blas64.Axpy(rEx.delTime, rEx.fxt, blas64.Vector{N: nPoints, Data: xt, Inc: 1})
+
+	return nil
+}
+
+type Huens3Explicit struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	dt2by3 float64
+	dtBy3  float64
+	dtBy4  float64
+	dt3by4 float64
+}
+
+func (h3Ex *Huens3Explicit) Name() string {
+	return "Huen's Order 3"
+}
+
+func (h3Ex *Huens3Explicit) NewDef(dt float64, tdFunc gridData.TDPotentialOp) *Huens3Explicit {
+	return &Huens3Explicit{
+		timeFunc: tdFunc,
+		delTime:  dt,
+
+		dtBy3:  dt / 3.,
+		dt2by3: (2 * dt) / 3.,
+		dtBy4:  dt / 4.,
+		dt3by4: (3 * dt) / 4.,
+	}
+}
+
+func (h3Ex *Huens3Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	h3Ex.timeFunc = tdFunc
+	h3Ex.delTime = dt
+
+	h3Ex.dtBy3 = dt / 3.
+	h3Ex.dt2by3 = (2 * dt) / 3.
+	h3Ex.dtBy4 = dt / 4.
+	h3Ex.dt3by4 = (3 * dt) / 4.
+}
+
+func (h3Ex *Huens3Explicit) NextStep(xt, t float64) (float64, error) {
+	k1 := h3Ex.timeFunc.EvaluateAt(xt, t)
+	k2 := h3Ex.timeFunc.EvaluateAt(xt+h3Ex.dtBy3*k1, t+h3Ex.dtBy3)
+	k3 := h3Ex.timeFunc.EvaluateAt(xt+h3Ex.dt2by3*k2, t+h3Ex.dt2by3)
+	return xt + h3Ex.dtBy4*(k1+3.*k3), nil
+}
+
+type VDHouwenExplicit struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	dt8by15 float64
+	dt5by12 float64
+	dt2by3  float64
+	dtBy4   float64
+}
+
+func (vdh3Ex *VDHouwenExplicit) Name() string {
+	return "Van der Houwen's/Wray's third-order method"
+}
+
+func (vdh3Ex *VDHouwenExplicit) NewDef(dt float64, tdFunc gridData.TDPotentialOp) *VDHouwenExplicit {
+	return &VDHouwenExplicit{
+		timeFunc: tdFunc,
+		delTime:  dt,
+		dtBy4:    dt / 4.,
+		dt2by3:   (2 * dt) / 3.,
+		dt5by12:  (5 * dt) / 12.,
+		dt8by15:  (8 * dt) / 15.,
+	}
+}
+
+func (vdh3Ex *VDHouwenExplicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	vdh3Ex.timeFunc = tdFunc
+	vdh3Ex.delTime = dt
+	vdh3Ex.dtBy4 = dt / 4.
+	vdh3Ex.dt2by3 = (2 * dt) / 3.
+	vdh3Ex.dt5by12 = (5 * dt) / 12.
+	vdh3Ex.dt8by15 = (8 * dt) / 15.
+}
+
+func (vdh3Ex *VDHouwenExplicit) NextStep(xt, t float64) (float64, error) {
+	k1 := vdh3Ex.timeFunc.EvaluateAt(xt, t)
+	k2 := vdh3Ex.timeFunc.EvaluateAt(xt+vdh3Ex.dt8by15*k1, t+vdh3Ex.dt8by15)
+	val := vdh3Ex.dtBy4*k1 + vdh3Ex.dt5by12*k2
+	k3 := vdh3Ex.timeFunc.EvaluateAt(xt+val, t+vdh3Ex.dt2by3)
+	return xt + vdh3Ex.dtBy4*(k1+3.*k3), nil
+}
+
+type SSPRungeKutta3 struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	halfDt float64
+	dtBy4  float64
+	dtBy6  float64
+	dt2by3 float64
+}
+
+func (ssprk3 *SSPRungeKutta3) Name() string {
+	return "Third-order Strong Stability Preserving Runge-Kutta"
+}
+
+func (ssprk3 *SSPRungeKutta3) NewDef(dt float64, tdFunc gridData.TDPotentialOp) *SSPRungeKutta3 {
+	return &SSPRungeKutta3{
+		timeFunc: tdFunc,
+		delTime:  dt,
+		halfDt:   dt / 2,
+		dtBy4:    dt / 4.,
+		dtBy6:    dt / 6.,
+		dt2by3:   (2 * dt) / 3.,
+	}
+}
+
+func (ssprk3 *SSPRungeKutta3) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	ssprk3.timeFunc = tdFunc
+	ssprk3.delTime = dt
+	ssprk3.dtBy4 = dt / 4.
+	ssprk3.dtBy6 = dt / 6.
+	ssprk3.halfDt = dt / 2.
+	ssprk3.dt2by3 = (2 * dt) / 3.
+}
+
+func (ssprk3 *SSPRungeKutta3) NextStep(xt, t float64) (float64, error) {
+	k1 := ssprk3.timeFunc.EvaluateAt(xt, t)
+	k2 := ssprk3.timeFunc.EvaluateAt(xt+ssprk3.delTime*k1, t+ssprk3.delTime)
+	val := (k1 + k2) * ssprk3.dtBy4
+	k3 := ssprk3.timeFunc.EvaluateAt(xt+val, t+ssprk3.halfDt)
+	return xt + ssprk3.dtBy6*(k1+k2) + k3*ssprk3.dt2by3, nil
+}
+
+type RungeKutta3Explicit struct {
+	timeFunc gridData.TDPotentialOp
+	delTime  float64
+
+	halfDt float64
+	dt2by3 float64
+	dtby6  float64
+}
+
+func (rg3Ex *RungeKutta3Explicit) Name() string {
+	return "Runge-Kutta Order 3"
+}
+
+func (rg3Ex *RungeKutta3Explicit) NewDef(dt float64, tdFunc gridData.TDPotentialOp) *RungeKutta3Explicit {
+	return &RungeKutta3Explicit{
+		timeFunc: tdFunc,
+		delTime:  dt,
+		halfDt:   dt / 2,
+		dt2by3:   (2 * dt) / 3.,
+		dtby6:    dt / 6.,
+	}
+}
+
+func (rg3Ex *RungeKutta3Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	rg3Ex.timeFunc = tdFunc
+	rg3Ex.delTime = dt
+	rg3Ex.dtby6 = dt / 6
+	rg3Ex.halfDt = dt / 2
+	rg3Ex.dt2by3 = (2 * dt) / 3.
+}
+
+func (rg3Ex *RungeKutta3Explicit) NextStep(xt, t float64) (float64, error) {
+	k1 := rg3Ex.timeFunc.EvaluateAt(xt, t)
+	k2 := rg3Ex.timeFunc.EvaluateAt(xt+rg3Ex.halfDt*k1, t+rg3Ex.halfDt)
+	val := (-k1 + 2*k2) * rg3Ex.delTime
+	k3 := rg3Ex.timeFunc.EvaluateAt(xt+val, t+rg3Ex.delTime)
+	return xt + rg3Ex.dtby6*(k1+4.*k2+k3), nil
+}
+
 // RungeKutta4Explicit implements the classic 4th-order Runge-Kutta method
 type RungeKutta4Explicit struct {
 	timeFunc  gridData.TDPotentialOp
@@ -315,4 +591,121 @@ func (rgEx *RungeKutta4Explicit) NextStepOnGrid(xt []float64, t float64) error {
 	}
 
 	return nil
+}
+
+// RungeKutta38 implements the classic 4th-order Runge-Kutta method
+type RungeKutta38 struct {
+	timeFunc  gridData.TDPotentialOp
+	deltaTime float64
+
+	// Pre-allocated buffers for grid operations
+	dtBy3  float64
+	dt2By3 float64
+	dtBy8  float64
+
+	xPlusDt blas64.Vector
+	k1      blas64.Vector
+	k2      blas64.Vector
+	k3      blas64.Vector
+	k4      blas64.Vector
+}
+
+func (rg38 *RungeKutta38) Name() string {
+	return "Runge-Kutta-38 Order 4"
+}
+
+func (rg38 *RungeKutta38) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *RungeKutta38 {
+	return &RungeKutta38{
+		timeFunc:  tdFunc,
+		deltaTime: dt,
+		dtBy3:     dt / 3,
+		dt2By3:    (2 * dt) / 3.,
+		dtBy8:     dt / 8,
+	}
+}
+
+func (rg38 *RungeKutta38) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	rg38.timeFunc = tdFunc
+	rg38.deltaTime = dt
+	rg38.dtBy3 = dt / 3
+	rg38.dt2By3 = (2 * dt) / 3
+	rg38.dtBy8 = dt / 8
+}
+
+func (rg38 *RungeKutta38) NextStep(xt, t float64) (float64, error) {
+	k1 := rg38.timeFunc.EvaluateAt(xt, t)
+	k2 := rg38.timeFunc.EvaluateAt(xt+k1*rg38.dtBy3, t+rg38.dtBy3)
+	val := k2*rg38.deltaTime - k1*rg38.dtBy3
+	k3 := rg38.timeFunc.EvaluateAt(xt+val, t+rg38.dt2By3)
+	val = rg38.deltaTime * (k1 - k2 + k3)
+	k4 := rg38.timeFunc.EvaluateAt(xt+val, t+rg38.deltaTime)
+	slope := k1 + 3*(k2+k3) + k4
+
+	if math.IsNaN(slope) || math.IsInf(slope, 0) {
+		return xt, fmt.Errorf("invalid derivative: NaN or Inf encountered")
+	}
+
+	return xt + rg38.dtBy8*slope, nil
+}
+
+type Nystrom5Explicit struct {
+	timeFunc  gridData.TDPotentialOp
+	deltaTime float64
+
+	// Pre-allocated buffers for grid operations
+	dtBy3  float64
+	dt2By3 float64
+	dtBy8  float64
+}
+
+func (nRK5ex *Nystrom5Explicit) Name() string {
+	return "Nystrom's fifth-order method"
+}
+
+func (nRK5ex *Nystrom5Explicit) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *Nystrom5Explicit {
+	return &Nystrom5Explicit{
+		timeFunc:  tdFunc,
+		deltaTime: dt,
+		dtBy3:     dt / 3,
+		dt2By3:    (2 * dt) / 3.,
+		dtBy8:     dt / 8,
+	}
+}
+
+func (nRK5ex *Nystrom5Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	nRK5ex.timeFunc = tdFunc
+	nRK5ex.deltaTime = dt
+	nRK5ex.dtBy3 = dt / 3
+	nRK5ex.dt2By3 = (2 * dt) / 3
+	nRK5ex.dtBy8 = dt / 8
+}
+
+type RKFelbergAdaptive struct {
+	timeFunc  gridData.TDPotentialOp
+	deltaTime float64
+}
+
+type CashKarpAdaptive struct {
+	timeFunc  gridData.TDPotentialOp
+	deltaTime float64
+}
+
+func (ckEx *CashKarpAdaptive) NextStep(xt, t float64) (float64, error) {
+	k1 := ckEx.timeFunc.EvaluateAt(xt, t)
+
+	deltaTimeStep1 := ckEx.deltaTime / 5
+	k2 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep1*k1, t+deltaTimeStep1)
+
+	deltaTimeStep2 := deltaTimeStep1 * 3
+	k3 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep2*(k1/8+3*k2/8), t+deltaTimeStep2/2)
+
+	val := deltaTimeStep1 * (3*k1/2 - 9*k2/2 + 6*k3)
+	k4 := ckEx.timeFunc.EvaluateAt(xt+val, t+3*deltaTimeStep1)
+
+	val = 5*k2/2 + (-11*k1/2-35*(2*k3+k4))/27
+	k5 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+ckEx.deltaTime)
+
+	val = 1631*k1/55296 + 175*k2/512 + 575*k3/13824 + 44275*k4/110592 + 253*k5/4096
+	k6 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+7*ckEx.deltaTime/8)
+	return xt + k5*k6, nil
 }

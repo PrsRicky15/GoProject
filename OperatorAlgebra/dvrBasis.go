@@ -25,6 +25,16 @@ type KeDvrBasis struct {
 	kMatCached  bool
 }
 
+func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (k *KeDvrBasis) ExpIdtTo(Dt float64, In []complex128, Out []complex128) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewKeDVR creates and initializes a new kinetic energy DVR basis
 func NewKeDVR(grid *gridData.RadGrid, mass float64) *KeDvrBasis {
 	ndim := int(grid.NPoints())

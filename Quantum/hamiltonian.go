@@ -31,7 +31,8 @@ func (op *HamiltonianOp) Mat() {
 	if err != nil {
 		return
 	}
-	op.hmat = op.kinE.(*OperatorAlgebra.KeDvrBasis).KMat
+	// need a change
+	op.hmat = op.kinE.KMat
 
 	for i := 0; i < int(op.grid.NPoints()); i++ {
 		op.hmat.(*mat.Dense).Set(i, i, op.hmat.At(i, i)+vPot[i])
