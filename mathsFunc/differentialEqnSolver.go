@@ -648,36 +648,178 @@ func (rg38 *RungeKutta38) NextStep(xt, t float64) (float64, error) {
 	return xt + rg38.dtBy8*slope, nil
 }
 
+// Ralston4Order Ralston's fourth-order method
+type Ralston4Order struct {
+	timeFunc  gridData.TDPotentialOp
+	deltaTime float64
+
+	// Pre-allocated buffers for grid operations
+	dtCoefs  []float64
+	ksCoefs  []float64
+	fnlCoefs []float64
+}
+
+func (ral4 *Ralston4Order) Name() string {
+	return "Ralston's fourth-order method!"
+}
+
+func (ral *Ralston4Order) coefficients(dt float64, dts, ks, bs []float64) {
+	dts[0] = (2 / 5.) * dt
+	dts[1] = ((14. - 3*math.Sqrt(5.)) / 16.) * dt
+	dts[2] = dt
+
+	ks[0] = (2 / 5.) * dt
+	ks[1] = ((-2889. + 1428*math.Sqrt(5.)) / 1024) * dt
+	ks[2] = ((3785 - 1620*math.Sqrt(5.)) / 1024) * dt
+	ks[3] = ((-3365 + 2094*math.Sqrt(5.)) / 6040) * dt
+	ks[4] = ((-975 - 3046*math.Sqrt(5.)) / 2552) * dt
+	ks[5] = ((467040 + 203968*math.Sqrt(5.)) / 240845) * dt
+
+	bs[0] = ((263 + 24*math.Sqrt(5.)) / 1812) * dt
+	bs[1] = ((125 - 1000*math.Sqrt(5.)) / 3828) * dt
+	bs[2] = ((3426304 + 1661952*math.Sqrt(5.)) / 5924787) * dt
+	bs[3] = ((30 - 4*math.Sqrt(5.)) / 123) * dt
+}
+
+func (ral4 *Ralston4Order) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *Ralston4Order {
+	dts := make([]float64, 3)
+	ks := make([]float64, 6)
+	bs := make([]float64, 4)
+	ral4.coefficients(dt, dts, ks, bs)
+
+	return &Ralston4Order{
+		timeFunc:  tdFunc,
+		deltaTime: dt,
+		dtCoefs:   dts,
+		ksCoefs:   ks,
+		fnlCoefs:  bs,
+	}
+}
+
+func (ral4 *Ralston4Order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	dts := make([]float64, 4)
+	ks := make([]float64, 6)
+	bs := make([]float64, 4)
+	ral4.coefficients(dt, dts, ks, bs)
+
+	ral4.timeFunc = tdFunc
+	ral4.deltaTime = dt
+	ral4.dtCoefs = dts
+	ral4.ksCoefs = ks
+	ral4.fnlCoefs = bs
+}
+
+func (ral4 *Ralston4Order) NextStep(xt, t float64) (float64, error) {
+	k1 := ral4.timeFunc.EvaluateAt(xt, t)
+	k2 := ral4.timeFunc.EvaluateAt(xt+k1*ral4.ksCoefs[0], t+ral4.dtCoefs[0])
+
+	val := k1*ral4.ksCoefs[1] + k2*ral4.ksCoefs[2]
+	k3 := ral4.timeFunc.EvaluateAt(xt+val, t+ral4.dtCoefs[1])
+
+	val = k1*ral4.ksCoefs[3] + k2*ral4.ksCoefs[4] + k3*ral4.ksCoefs[5]
+	k4 := ral4.timeFunc.EvaluateAt(xt+val, t+ral4.dtCoefs[2])
+
+	integrant := k1*ral4.fnlCoefs[0] + k2*ral4.fnlCoefs[1] + k3*ral4.fnlCoefs[2] + k4*ral4.fnlCoefs[3]
+
+	if math.IsNaN(integrant) || math.IsInf(integrant, 0) {
+		return xt, fmt.Errorf("invalid derivative: NaN or Inf encountered")
+	}
+
+	return xt + integrant, nil
+}
+
 type Nystrom5Explicit struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
 
 	// Pre-allocated buffers for grid operations
-	dtBy3  float64
-	dt2By3 float64
-	dtBy8  float64
+	dtCoefs  []float64
+	ksCoefs  []float64
+	fnlCoefs []float64
 }
 
 func (nRK5ex *Nystrom5Explicit) Name() string {
 	return "Nystrom's fifth-order method"
 }
 
+func (nRK5ex *Nystrom5Explicit) coefficients(dt float64, dts, ks, bs []float64) {
+	dts[0] = (1 / 3.) * dt
+	dts[1] = (2. / 5.) * dt
+	dts[2] = dt
+	dts[3] = (2. / 3.) * dt
+	dts[4] = (4. / 5.) * dt
+
+	ks[0] = dts[0]
+	ks[1] = (4. / 25.) * dt
+	ks[2] = (6. / 25.) * dt
+	ks[3] = (1 / 4.) * dt
+	ks[4] = -3 * dt
+	ks[5] = (15. / 4.) * dt
+	ks[6] = (2. / 27.) * dt
+	ks[7] = (10. / 9.) * dt
+	ks[8] = (-50. / 81.) * dt
+	ks[9] = (8. / 81.) * dt
+	ks[10] = (2. / 25.) * dt
+	ks[11] = (12. / 25.) * dt
+	ks[12] = (2. / 15.) * dt
+	ks[13] = (8. / 75.) * dt
+
+	bs[0] = (23. / 192.) * dt
+	bs[1] = (125. / 192.) * dt
+	bs[2] = (-27. / 64) * dt
+}
+
 func (nRK5ex *Nystrom5Explicit) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *Nystrom5Explicit {
+	dts := make([]float64, 5)
+	ks := make([]float64, 14)
+	bs := make([]float64, 3)
+	nRK5ex.coefficients(dt, dts, ks, bs)
+
 	return &Nystrom5Explicit{
 		timeFunc:  tdFunc,
 		deltaTime: dt,
-		dtBy3:     dt / 3,
-		dt2By3:    (2 * dt) / 3.,
-		dtBy8:     dt / 8,
+		dtCoefs:   dts,
+		ksCoefs:   ks,
+		fnlCoefs:  bs,
 	}
 }
 
 func (nRK5ex *Nystrom5Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	dts := make([]float64, 5)
+	ks := make([]float64, 14)
+	bs := make([]float64, 3)
+	nRK5ex.coefficients(dt, dts, ks, bs)
+
 	nRK5ex.timeFunc = tdFunc
 	nRK5ex.deltaTime = dt
-	nRK5ex.dtBy3 = dt / 3
-	nRK5ex.dt2By3 = (2 * dt) / 3
-	nRK5ex.dtBy8 = dt / 8
+	nRK5ex.dtCoefs = dts
+	nRK5ex.ksCoefs = ks
+	nRK5ex.fnlCoefs = bs
+}
+
+func (nRK5ex *Nystrom5Explicit) NextStep(xt, t float64) (float64, error) {
+	k1 := nRK5ex.timeFunc.EvaluateAt(xt, t)
+	k2 := nRK5ex.timeFunc.EvaluateAt(xt+k1*nRK5ex.ksCoefs[0], t+nRK5ex.dtCoefs[0])
+
+	val := k1*nRK5ex.ksCoefs[1] + k2*nRK5ex.ksCoefs[2]
+	k3 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[1])
+
+	val = k1*nRK5ex.ksCoefs[3] + k2*nRK5ex.ksCoefs[4] + k3*nRK5ex.ksCoefs[5]
+	k4 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[2])
+
+	val = k1*nRK5ex.ksCoefs[6] + k2*nRK5ex.ksCoefs[7] + k3*nRK5ex.ksCoefs[8] + k4*nRK5ex.ksCoefs[8]
+	k5 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[3])
+
+	val = k1*nRK5ex.ksCoefs[9] + k2*nRK5ex.ksCoefs[10] + k3*nRK5ex.ksCoefs[11] + k4*nRK5ex.ksCoefs[12]
+	k6 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[5])
+
+	integrant := k1*nRK5ex.fnlCoefs[0] + k3*nRK5ex.fnlCoefs[1] + k5*nRK5ex.fnlCoefs[2] + k6*nRK5ex.fnlCoefs[1]
+
+	if math.IsNaN(integrant) || math.IsInf(integrant, 0) {
+		return xt, fmt.Errorf("invalid derivative: NaN or Inf encountered")
+	}
+
+	return xt + integrant, nil
 }
 
 type RKFelbergAdaptive struct {
