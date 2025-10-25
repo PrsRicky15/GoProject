@@ -92,7 +92,7 @@ func (FRK12 *FehlbergRK12) NextStep(xt, t float64) (float64, error) {
 	k2 := FRK12.timeFunc.EvaluateAt(xt+k1*FRK12.halfDt, t+FRK12.halfDt)
 
 	val := k1*FRK12.kCoefs[0] + k2*FRK12.kCoefs[1]
-	k3 := FRK12.timeFunc.EvaluateAt(xt+val, t+FRK12.deltaTime)
+	k3 := FRK12.timeFunc.EvaluateAt(xt+val*FRK12.deltaTime, t+FRK12.deltaTime)
 
 	xtPlusdt1 := xt + FRK12.deltaTime*(k1*FRK12.b1Coefs[0]+k2*FRK12.b1Coefs[1]+k3*FRK12.b1Coefs[0])
 	xtPlusdt2 := xt + FRK12.deltaTime*(k1*FRK12.b2Coefs[0]+k2*FRK12.b1Coefs[1])
@@ -154,7 +154,7 @@ func (BS *BogackiShampine) NextStep(xt, t float64) (float64, error) {
 	k3 := BS.timeFunc.EvaluateAt(xt+k2*BS.dt3By4, t+BS.dt3By4)
 
 	val := k1*BS.kCoefs[0] + k2*BS.kCoefs[1] + k3*BS.kCoefs[2]
-	k4 := BS.timeFunc.EvaluateAt(xt+val, t+BS.deltaTime)
+	k4 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.deltaTime)
 
 	xtPlusdt1 := xt + BS.deltaTime*(k1*BS.b1Coefs[0]+k2*BS.b1Coefs[1]+k3*BS.b1Coefs[2])
 	xtPlusdt2 := xt + BS.deltaTime*(k1*BS.b1Coefs[0]+k2*BS.b1Coefs[1]+k3*BS.b1Coefs[2]+k4*BS.b1Coefs[3])
@@ -172,6 +172,70 @@ func (BS *BogackiShampine) NextStep(xt, t float64) (float64, error) {
 type RKFelberg struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
+
+	dtCoefs []float64
+	kCoefs  []float64
+	b1Coefs []float64
+	b2Coefs []float64
+}
+
+func (BS *RKFelberg) Name() string {
+	return "The simplest adaptive Runge–Kutta method !"
+}
+
+func (BS *RKFelberg) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *RKFelberg {
+
+	return &RKFelberg{
+		timeFunc:  tdFunc,
+		deltaTime: dt,
+		dtCoefs:   []float64{0.25, 3. / 8., 12. / 13., 1, 0.5},
+		kCoefs: []float64{0.25, 3. / 32., 9. / 32., 1932. / 2197., -7200 / 2197.,
+			7296. / 2197., 439. / 216., -8, 3680 / 513, -845 / 4104., -8 / 27., 2.,
+			-3544 / 2565, 1859 / 4104., -11 / 40},
+		b1Coefs: []float64{16. / 135., 6656. / 12825., 28561. / 56430., -9. / 50., 2. / 55.},
+		b2Coefs: []float64{25. / 216., 1408. / 2565., 2197 / 4104., -1. / 5.},
+	}
+}
+
+func (BS *RKFelberg) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	BS.deltaTime = dt
+	BS.timeFunc = tdFunc
+}
+
+func (BS *RKFelberg) adaptiveDt(dt float64) {
+	BS.deltaTime = dt
+}
+
+func (BS *RKFelberg) NextStep(xt, t float64) (float64, error) {
+	k1 := BS.timeFunc.EvaluateAt(xt, t)
+	k2 := BS.timeFunc.EvaluateAt(xt+k1*BS.kCoefs[0]*BS.deltaTime, t+BS.dtCoefs[0])
+
+	val := k1*BS.kCoefs[1] + k2*BS.kCoefs[2]
+	k3 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[1])
+
+	val = k1*BS.kCoefs[3] + k2*BS.kCoefs[4] + k3*BS.kCoefs[5]
+	k4 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[2])
+
+	val = k1*BS.kCoefs[6] + k2*BS.kCoefs[7] + k3*BS.kCoefs[8] + k4*BS.kCoefs[9]
+	k5 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[4])
+
+	val = k1*BS.kCoefs[10] + k2*BS.kCoefs[11] + k3*BS.kCoefs[12] + k4*BS.kCoefs[13] + k5*BS.kCoefs[14]
+	k6 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[5])
+
+	integrant := (k1*BS.b1Coefs[0] + k3*BS.b1Coefs[1] + k4*BS.b1Coefs[2] + k5*BS.b1Coefs[3] + k6*BS.b1Coefs[4])
+	xtPlusdt1 := xt + BS.deltaTime*integrant
+
+	integrant = (k1*BS.b2Coefs[0] + k3*BS.b2Coefs[1] + k4*BS.b2Coefs[2] + k5*BS.b2Coefs[3])
+	xtPlusdt2 := xt + BS.deltaTime*integrant
+
+	Err := math.Abs(xtPlusdt1-xtPlusdt2) / BS.deltaTime
+
+	if Err <= adaptiveTolerance {
+		return xtPlusdt2, nil
+	}
+
+	BS.adaptiveDt(0.9 * BS.deltaTime * math.Sqrt(tolerance/Err))
+	return xt, nil
 }
 
 type CashKarp struct {
