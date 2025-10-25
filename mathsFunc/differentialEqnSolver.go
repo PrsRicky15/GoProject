@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	maxIter   = 20
-	tolerance = 1e-7
-	delta     = 1e-6
+	maxIter           = 20
+	tolerance         = 1e-7
+	delta             = 1e-6
+	adaptiveTolerance = 1e-8
 )
 
 // ODESolver interface for different solving methods
