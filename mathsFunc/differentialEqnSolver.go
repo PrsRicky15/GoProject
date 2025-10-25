@@ -663,7 +663,7 @@ func (ral4 *Ralston4Order) Name() string {
 	return "Ralston's fourth-order method!"
 }
 
-func (ral *Ralston4Order) coefficients(dt float64, dts, ks, bs []float64) {
+func (ral4 *Ralston4Order) coefficients(dt float64, dts, ks, bs []float64) {
 	dts[0] = (2 / 5.) * dt
 	dts[1] = ((14. - 3*math.Sqrt(5.)) / 16.) * dt
 	dts[2] = dt
@@ -820,34 +820,4 @@ func (nRK5ex *Nystrom5Explicit) NextStep(xt, t float64) (float64, error) {
 	}
 
 	return xt + integrant, nil
-}
-
-type RKFelbergAdaptive struct {
-	timeFunc  gridData.TDPotentialOp
-	deltaTime float64
-}
-
-type CashKarpAdaptive struct {
-	timeFunc  gridData.TDPotentialOp
-	deltaTime float64
-}
-
-func (ckEx *CashKarpAdaptive) NextStep(xt, t float64) (float64, error) {
-	k1 := ckEx.timeFunc.EvaluateAt(xt, t)
-
-	deltaTimeStep1 := ckEx.deltaTime / 5
-	k2 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep1*k1, t+deltaTimeStep1)
-
-	deltaTimeStep2 := deltaTimeStep1 * 3
-	k3 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep2*(k1/8+3*k2/8), t+deltaTimeStep2/2)
-
-	val := deltaTimeStep1 * (3*k1/2 - 9*k2/2 + 6*k3)
-	k4 := ckEx.timeFunc.EvaluateAt(xt+val, t+3*deltaTimeStep1)
-
-	val = 5*k2/2 + (-11*k1/2-35*(2*k3+k4))/27
-	k5 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+ckEx.deltaTime)
-
-	val = 1631*k1/55296 + 175*k2/512 + 575*k3/13824 + 44275*k4/110592 + 253*k5/4096
-	k6 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+7*ckEx.deltaTime/8)
-	return xt + k5*k6, nil
 }
