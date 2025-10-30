@@ -169,7 +169,8 @@ func (BS *BogackiShampine) NextStep(xt, t float64) (float64, error) {
 	return xt, nil
 }
 
-type RKFelberg struct {
+// adaptiveRKBase contains the common implementation for adaptive RK methods
+type adaptiveRKBase struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
 
@@ -179,91 +180,176 @@ type RKFelberg struct {
 	b2Coefs []float64
 }
 
-func (BS *RKFelberg) Name() string {
-	return "The simplest adaptive Runge–Kutta method !"
+func (ark *adaptiveRKBase) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	ark.deltaTime = dt
+	ark.timeFunc = tdFunc
 }
 
-func (BS *RKFelberg) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *RKFelberg {
-
-	return &RKFelberg{
-		timeFunc:  tdFunc,
-		deltaTime: dt,
-		dtCoefs:   []float64{0.25, 3. / 8., 12. / 13., 1, 0.5},
-		kCoefs: []float64{0.25, 3. / 32., 9. / 32., 1932. / 2197., -7200 / 2197.,
-			7296. / 2197., 439. / 216., -8, 3680 / 513, -845 / 4104., -8 / 27., 2.,
-			-3544 / 2565, 1859 / 4104., -11 / 40},
-		b1Coefs: []float64{16. / 135., 6656. / 12825., 28561. / 56430., -9. / 50., 2. / 55.},
-		b2Coefs: []float64{25. / 216., 1408. / 2565., 2197 / 4104., -1. / 5.},
-	}
+func (ark *adaptiveRKBase) adaptiveDt(dt float64) {
+	ark.deltaTime = dt
 }
 
-func (BS *RKFelberg) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
-	BS.deltaTime = dt
-	BS.timeFunc = tdFunc
-}
+func (ark *adaptiveRKBase) NextStep(xt, t float64) (float64, error) {
+	k1 := ark.timeFunc.EvaluateAt(xt, t)
+	k2 := ark.timeFunc.EvaluateAt(xt+k1*ark.kCoefs[0]*ark.deltaTime, t+ark.dtCoefs[0])
 
-func (BS *RKFelberg) adaptiveDt(dt float64) {
-	BS.deltaTime = dt
-}
+	val := k1*ark.kCoefs[1] + k2*ark.kCoefs[2]
+	k3 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[1])
 
-func (BS *RKFelberg) NextStep(xt, t float64) (float64, error) {
-	k1 := BS.timeFunc.EvaluateAt(xt, t)
-	k2 := BS.timeFunc.EvaluateAt(xt+k1*BS.kCoefs[0]*BS.deltaTime, t+BS.dtCoefs[0])
+	val = k1*ark.kCoefs[3] + k2*ark.kCoefs[4] + k3*ark.kCoefs[5]
+	k4 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[2])
 
-	val := k1*BS.kCoefs[1] + k2*BS.kCoefs[2]
-	k3 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[1])
+	val = k1*ark.kCoefs[6] + k2*ark.kCoefs[7] + k3*ark.kCoefs[8] + k4*ark.kCoefs[9]
+	k5 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[3])
 
-	val = k1*BS.kCoefs[3] + k2*BS.kCoefs[4] + k3*BS.kCoefs[5]
-	k4 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[2])
+	val = k1*ark.kCoefs[10] + k2*ark.kCoefs[11] + k3*ark.kCoefs[12] + k4*ark.kCoefs[13] + k5*ark.kCoefs[14]
+	k6 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[4])
 
-	val = k1*BS.kCoefs[6] + k2*BS.kCoefs[7] + k3*BS.kCoefs[8] + k4*BS.kCoefs[9]
-	k5 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[4])
+	integrant := k1*ark.b1Coefs[0] + k3*ark.b1Coefs[1] + k4*ark.b1Coefs[2] + k5*ark.b1Coefs[3] + k6*ark.b1Coefs[4]
+	xtPlusdt1 := xt + ark.deltaTime*integrant
 
-	val = k1*BS.kCoefs[10] + k2*BS.kCoefs[11] + k3*BS.kCoefs[12] + k4*BS.kCoefs[13] + k5*BS.kCoefs[14]
-	k6 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.dtCoefs[5])
+	integrant = k1*ark.b2Coefs[0] + k3*ark.b2Coefs[1] + k4*ark.b2Coefs[2] + k5*ark.b2Coefs[3]
+	xtPlusdt2 := xt + ark.deltaTime*integrant
 
-	integrant := (k1*BS.b1Coefs[0] + k3*BS.b1Coefs[1] + k4*BS.b1Coefs[2] + k5*BS.b1Coefs[3] + k6*BS.b1Coefs[4])
-	xtPlusdt1 := xt + BS.deltaTime*integrant
+	err := math.Abs(xtPlusdt1-xtPlusdt2) / ark.deltaTime
 
-	integrant = (k1*BS.b2Coefs[0] + k3*BS.b2Coefs[1] + k4*BS.b2Coefs[2] + k5*BS.b2Coefs[3])
-	xtPlusdt2 := xt + BS.deltaTime*integrant
-
-	Err := math.Abs(xtPlusdt1-xtPlusdt2) / BS.deltaTime
-
-	if Err <= adaptiveTolerance {
+	if err <= adaptiveTolerance {
 		return xtPlusdt2, nil
 	}
 
-	BS.adaptiveDt(0.9 * BS.deltaTime * math.Sqrt(tolerance/Err))
+	ark.adaptiveDt(0.9 * ark.deltaTime * math.Sqrt(tolerance/err))
 	return xt, nil
 }
 
-type CashKarp struct {
-	timeFunc  gridData.TDPotentialOp
-	deltaTime float64
+// RKFelberg - Runge-Kutta-Fehlberg method
+type RKFelberg struct {
+	adaptiveRKBase
 }
 
-func (ckEx *CashKarp) NextStep(xt, t float64) (float64, error) {
-	k1 := ckEx.timeFunc.EvaluateAt(xt, t)
+func (RKF *RKFelberg) Name() string {
+	return "The simplest adaptive Runge–Kutta method !"
+}
 
-	deltaTimeStep1 := ckEx.deltaTime / 5
-	k2 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep1*k1, t+deltaTimeStep1)
+func (RKF *RKFelberg) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *RKFelberg {
+	return &RKFelberg{
+		adaptiveRKBase: adaptiveRKBase{
+			timeFunc:  tdFunc,
+			deltaTime: dt,
+			dtCoefs:   []float64{0.25, 3. / 8., 12. / 13., 1, 0.5},
+			kCoefs: []float64{
+				0.25,
+				3. / 32., 9. / 32.,
+				1932. / 2197., -7200. / 2197., 7296. / 2197.,
+				439. / 216., -8, 3680. / 513., -845. / 4104.,
+				-8. / 27., 2., -3544. / 2565., 1859. / 4104., -11. / 40.},
+			b1Coefs: []float64{16. / 135., 6656. / 12825., 28561. / 56430., -9. / 50., 2. / 55.},
+			b2Coefs: []float64{25. / 216., 1408. / 2565., 2197. / 4104., -1. / 5., 0},
+		},
+	}
+}
 
-	deltaTimeStep2 := deltaTimeStep1 * 3
-	k3 := ckEx.timeFunc.EvaluateAt(xt+deltaTimeStep2*(k1/8+3*k2/8), t+deltaTimeStep2/2)
+// CashKarp - Cash-Karp method
+type CashKarp struct {
+	adaptiveRKBase
+}
 
-	val := deltaTimeStep1 * (3*k1/2 - 9*k2/2 + 6*k3)
-	k4 := ckEx.timeFunc.EvaluateAt(xt+val, t+3*deltaTimeStep1)
+func (CK *CashKarp) Name() string {
+	return "The Cash Karp method for adaptive ODE!"
+}
 
-	val = 5*k2/2 + (-11*k1/2-35*(2*k3+k4))/27
-	k5 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+ckEx.deltaTime)
-
-	val = 1631*k1/55296 + 175*k2/512 + 575*k3/13824 + 44275*k4/110592 + 253*k5/4096
-	k6 := ckEx.timeFunc.EvaluateAt(xt+ckEx.deltaTime*val, t+7*ckEx.deltaTime/8)
-	return xt + k5*k6, nil
+func (CK *CashKarp) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *CashKarp {
+	return &CashKarp{
+		adaptiveRKBase: adaptiveRKBase{
+			timeFunc:  tdFunc,
+			deltaTime: dt,
+			dtCoefs:   []float64{0.2, 3. / 10., 3. / 5., 1, 7. / 8.},
+			kCoefs: []float64{
+				0.2,
+				3. / 40., 9. / 40.,
+				3. / 10., -9. / 10., 6. / 5.,
+				-11. / 54., 5. / 2., -70. / 27., 35. / 27.,
+				1631. / 55296., 175. / 512., 575. / 13824., 44275. / 110592., 253. / 4096.},
+			b1Coefs: []float64{37. / 378., 250. / 621., 125. / 594., 512. / 1771., 0},
+			b2Coefs: []float64{2825. / 27648., 18575. / 48384., 13525. / 55296., 277. / 14336., 0.25},
+		},
+	}
 }
 
 type DormandPrince struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
+
+	dtCoefs []float64
+	kCoefs  []float64
+	b1Coefs []float64
+	b2Coefs []float64
+}
+
+func (DP *DormandPrince) Name() string {
+	return "The simplest adaptive Runge–Kutta method !"
+}
+
+func (DP *DormandPrince) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *DormandPrince {
+
+	return &DormandPrince{
+		timeFunc:  tdFunc,
+		deltaTime: dt,
+		dtCoefs:   []float64{0.2, 3. / 10., 4. / 5., 8. / 9.},
+		kCoefs: []float64{
+			0.2,
+			3. / 40., 9. / 40.,
+			44. / 45., -56. / 15., 32. / 9.,
+			19372. / 6561., 25360. / 2187., 64448. / 6561., -212. / 729.,
+			9017. / 3168., 355. / 33., 46732. / 5247., 49. / 176., 5103. / 18656.,
+		},
+		b1Coefs: []float64{35. / 384., 500. / 1113., 125. / 192., -2187. / 6784., 11. / 84.},
+		b2Coefs: []float64{5179. / 57600., 7571. / 16695., 393. / 640., -92097. / 339200.,
+			187. / 2100., 1. / 40.},
+	}
+}
+
+func (DP *DormandPrince) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
+	DP.deltaTime = dt
+	DP.timeFunc = tdFunc
+}
+
+func (DP *DormandPrince) adaptiveDt(dt float64) {
+	DP.deltaTime = dt
+}
+
+func (DP *DormandPrince) NextStep(xt, t float64) (float64, error) {
+	k1 := DP.timeFunc.EvaluateAt(xt, t)
+	k2 := DP.timeFunc.EvaluateAt(xt+k1*DP.kCoefs[0]*DP.deltaTime, t+DP.dtCoefs[0])
+
+	val := k1*DP.kCoefs[1] + k2*DP.kCoefs[2]
+	k3 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[1])
+
+	val = k1*DP.kCoefs[3] + k2*DP.kCoefs[4] + k3*DP.kCoefs[5]
+	k4 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[2])
+
+	val = k1*DP.kCoefs[6] + k2*DP.kCoefs[7] + k3*DP.kCoefs[8] + k4*DP.kCoefs[9]
+	k5 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[3])
+
+	val = k1*DP.kCoefs[10] + k2*DP.kCoefs[11] + k3*DP.kCoefs[12] + k4*DP.kCoefs[13] + k5*DP.kCoefs[14]
+	k6 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.deltaTime)
+
+	val = k1*DP.b1Coefs[0] + k3*DP.b1Coefs[1] + k4*DP.b1Coefs[2] + k5*DP.b1Coefs[3] + k6*DP.b1Coefs[4]
+	k7 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.deltaTime)
+
+	integrant := k1*DP.b1Coefs[0] + k3*DP.b1Coefs[1] + k4*DP.b1Coefs[2] + k5*DP.b1Coefs[3] + k6*DP.b1Coefs[4]
+	xtPlusdt1 := xt + DP.deltaTime*integrant
+
+	integrant = k1*DP.b2Coefs[0] + k3*DP.b2Coefs[1] + k4*DP.b2Coefs[2] + k5*DP.b2Coefs[3] +
+		k6*DP.b2Coefs[4] + k7*DP.b2Coefs[5]
+
+	xtPlusdt2 := xt + DP.deltaTime*integrant
+
+	err := math.Abs(xtPlusdt1-xtPlusdt2) / DP.deltaTime
+
+	if err <= adaptiveTolerance {
+		return xtPlusdt2, nil
+	}
+
+	DP.adaptiveDt(0.9 * DP.deltaTime * math.Sqrt(tolerance/err))
+	return xt, nil
 }
