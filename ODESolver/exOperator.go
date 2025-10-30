@@ -1,4 +1,4 @@
-package mathsFunc
+package EquationSolver
 
 import (
 	"gonum.org/v1/gonum/mat"

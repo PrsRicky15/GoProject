@@ -1,4 +1,4 @@
-package mathsFunc
+package EquationSolver
 
 import "GoProject/gridData"
 
