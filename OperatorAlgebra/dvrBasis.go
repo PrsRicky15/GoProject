@@ -150,7 +150,7 @@ func (k *KeDvrBasis) RealDiagonalize() (eigenvalues []float64, eigenvectors *mat
 	return eigenvalues, eigenvectors, err
 }
 
-// ExpDt computes exp(Dt * K) and applies it to input vector
+// ExpDt computes exp(dt * K) and applies it to input vector
 func (k *KeDvrBasis) ExpDt(dt float64, in []float64) ([]float64, error) {
 	if len(in) != k.ndims {
 		return nil, fmt.Errorf("input vector length %d doesn't match basis dimension %d", len(in), k.ndims)
@@ -171,7 +171,7 @@ func (k *KeDvrBasis) ExpDt(dt float64, in []float64) ([]float64, error) {
 	return result, nil
 }
 
-// ExpDtInPlace computes exp(Dt * K) and applies it to input vector in-place
+// ExpDtInPlace computes exp(dt * K) and applies it to input vector in-place
 func (k *KeDvrBasis) ExpDtInPlace(dt float64, inOut []float64) error {
 	if len(inOut) != k.ndims {
 		return fmt.Errorf("vector length %d doesn't match basis dimension %d", len(inOut), k.ndims)
@@ -193,8 +193,8 @@ func (k *KeDvrBasis) ExpDtInPlace(dt float64, inOut []float64) error {
 	return nil
 }
 
-// ExpIdt computes exp(i*Dt*K) and applies it to complex input vector
-// This implements the complex-scaled exponential: exp(i*Dt*K)
+// ExpIdt computes exp(i*dt*K) and applies it to complex input vector
+// This implements the complex-scaled exponential: exp(i*dt*K)
 func (k *KeDvrBasis) ExpIdt(dt float64, in []complex128) ([]complex128, error) {
 	if len(in) != k.ndims {
 		return nil, fmt.Errorf("input vector length %d doesn't match basis dimension %d", len(in), k.ndims)
