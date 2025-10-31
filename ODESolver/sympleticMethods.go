@@ -150,7 +150,7 @@ func (lf *LeapFrog) NextStep(x, v float64) (float64, float64) {
 	return xNext, vNext
 }
 
-func (lf *LeapFrog) NextStepOnGrid(x, v []float64, time float64) {
+func (lf *LeapFrog) NextStepOnGrid(x, v []float64) {
 	if lf.vHalf == nil {
 		lf.vHalf = make([]float64, len(v))
 	}
