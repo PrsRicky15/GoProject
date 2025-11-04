@@ -1,0 +1,106 @@
+:root {
+    --primary-color: #0077b6;
+    --text-color: #333;
+    --background-color: #f4f7f6;
+    --container-bg-color: #ffffff;
+    --heading-color: #1a1a1a;
+    --border-color: #eee;
+}
+
+body {
+    font-family: 'Georgia', serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    width: 90%;
+    margin: 40px auto;
+    padding: 40px;
+    background-color: var(--container-bg-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+    font-family: 'Arial', sans-serif;
+    color: var(--heading-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 8px;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+.container .main-title {
+    margin-top: 0;
+    font-size: 2.5em;
+    text-align: center;
+    border-bottom: none;
+    color: var(--primary-color);
+}
+
+p {
+    margin-bottom: 25px;
+    text-align: justify;
+}
+
+/*.MathJax_Display {
+    margin: 20px 0 !important;
+    padding: 15px;
+    background-color: #fafafa;
+    border-left: 5px solid var(--primary-color);
+    overflow-x: auto;
+}*/
+
+.MathJax_Display {
+    /* Spacing and Dimensions */
+    margin: 20px 0;
+    /* Keep vertical margin clear */
+    padding: 20px;
+    /* Slightly more internal padding for a roomier feel */
+    width: fit-content;
+    /* Ensure the box is only as wide as its content (good for centering) */
+    min-width: 100%;
+    /* If content is narrow, still take full container width */
+
+    /* Background and Border */
+    background-color: #ffffff;
+    /* Use pure white for high contrast */
+    border: 1px solid #e0e0e0;
+    /* Subtle, light grey border all around */
+    border-radius: 8px;
+    /* Rounded corners for a softer look */
+
+    /* Highlight/Accent */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    /* Very light shadow for depth */
+    border-left: 5px solid var(--primary-color, #007bff);
+    /* Keep the accent color bar, add a fallback */
+
+    /* Typography and Content */
+    font-size: 1.1em;
+    /* Slightly increase font size for better readability */
+    overflow-x: auto;
+    /* Essential for wide equations */
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--primary-color);
+    transition: color 0.3s ease, border-bottom 0.3s ease;
+}
+
+a:hover {
+    color: #004d7a;
+    border-bottom: 1px solid #004d7a;
+}

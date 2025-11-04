@@ -1,0 +1,106 @@
+html {
+    background-image: url("images/wed.png");
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
+}
+
+body {
+    background: linear-gradient(grey, white) no-repeat fixed;
+}
+
+h1 {
+    text-shadow: 0 0 5px white, 0 -2px 3px rebeccapurple;
+    /* Added comma */
+    background: linear-gradient(to right, yellow, green) no-repeat fixed;
+    color: brown;
+    font-family: 'Satisfy', serif;
+    font-weight: bold;
+}
+
+h2 {
+    /* Added comma */
+    background: linear-gradient(to left, blue, orange) no-repeat fixed;
+    color: darkcyan;
+    font-family: 'momo', cursive;
+    font-style: italic;
+    text-decoration: black solid underline;
+    font-size: 22px;
+}
+
+h2:hover {
+    box-shadow: 5px 5px 5px white;
+}
+
+p {
+    /* Added comma */
+    background: linear-gradient(to left, rgb(119, 219, 126), rgb(172, 54, 121)) no-repeat fixed;
+    font-family: 'Tangerine', monospace;
+    border: 2px outset black;
+    border-radius: 5px;
+    /* padding: auto; - Removed this invalid line */
+}
+
+#box1 {
+    border: 2px solid;
+    width: 500px;
+    height: 100px;
+    font-size: 16px;
+    background: blueviolet;
+    padding: 5px;
+
+    margin: 2px;
+
+    float: left;
+}
+
+#box2 {
+    border: 2px solid;
+    width: 500px;
+    height: 100px;
+    font-size: 16px;
+    background: rgb(119, 219, 126);
+    padding: 5px;
+
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.par1 {
+    background: white;
+    border: none;
+    font-family: 'Tangerine', serif;
+}
+
+.par2 {
+    background: yellowgreen;
+    border: none;
+    font-family: 'Tangerine', math;
+    clear: both;
+}
+
+a:link {
+    color: black;
+}
+
+a:visited {
+    color: chocolate;
+}
+
+a:hover {
+    color: deeppink;
+}
+
+a:active {
+    font-size: 12px;
+    color: yellow;
+}
+
+button:hover {
+    font-size: 12px;
+    color: brown;
+}
+
+button:active {
+    color: violet;
+}

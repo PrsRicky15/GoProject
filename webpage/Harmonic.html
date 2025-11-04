@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+
+    <title>OneDimenSystems</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="main-title">One-Dimensional Quantum Systems</h1>
+
+        <h1>Harmonic Oscillator</h1>
+        <p>Quantum Harmonic Oscillator is like two particles attached with a string. Potential is of the form:
+            $$v(x) = \frac{1}{2}k (x - x_0)^2$$
+            General Schrodinger equation is of the form:
+            $$H(x)\Psi(x) = \left[ \frac{1}{2 m_e} \frac{d^2}{dx^2} + v(x) \right]\Psi(x)$$
+            <a href="https://en.wikipedia.org/wiki/Harmonic_oscillator" target="_blank" title="wikipedia">Read more
+                about the Harmonic Oscillator on Wikipedia.</a>
+        </p>
+
+        <h1>Morse potential</h1>
+        <p>Morse potential is like a spring which is deformed irreversibly and two will never interact with each other
+            again.
+            Potential is of the form:
+            $$v(x) = D_e \left[1 - e^{-\alpha(x - x_0)}\right]^2 $$
+            <a href="https://en.wikipedia.org/wiki/Morse_potential" target="_blank" title="wikipedia">Read more about
+                the Morse Potential on Wikipedia.</a>
+        </p>
+    </div>
+</body>
+
+</html>
