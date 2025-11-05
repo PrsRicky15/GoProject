@@ -1,0 +1,6 @@
+#---------------------------
+# Time-dependent parameter
+#---------------------------
+MacroDT: 5.0
+MacroSteps: 20
+MicroSteps: 50
