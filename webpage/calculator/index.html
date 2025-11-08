@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scientific Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="calculator">
+    <!-- Display -->
+      <label for="display"></label><input type="text" id="display" disabled>
+
+    <!-- Row 1 -->
+    <div class="row">
+        <button onclick="appendValue('Math.sin(')">sin</button>
+        <button onclick="appendValue('Math.cos(')">cos</button>
+        <button onclick="appendValue('Math.tan(')">tan</button>
+        <button onclick="appendValue('Math.log(')">log</button>
+        <button onclick="appendValue('Math.exp(')">exp</button>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="row">
+        <button onclick="appendValue('7')">7</button>
+        <button onclick="appendValue('8')">8</button>
+        <button onclick="appendValue('9')">9</button>
+        <button onclick="appendValue('/')">/</button>
+        <button onclick="appendValue('(')">(</button>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="row">
+        <button onclick="appendValue('4')">4</button>
+        <button onclick="appendValue('5')">5</button>
+        <button onclick="appendValue('6')">6</button>
+        <button onclick="appendValue('*')">*</button>
+        <button onclick="appendValue(')')">)</button>
+    </div>
+
+    <!-- Row 4 -->
+    <div class="row">
+        <button onclick="appendValue('1')">1</button>
+        <button onclick="appendValue('2')">2</button>
+        <button onclick="appendValue('3')">3</button>
+        <button onclick="appendValue('-')">-</button>
+        <button onclick="clearDisplay()">C</button>
+    </div>
+
+    <!-- Row 5 -->
+    <div class="row">
+        <button onclick="appendValue('0')">0</button>
+        <button onclick="appendValue('.')">.</button>
+        <button onclick="appendValue('+')">+</button>
+        <button onclick="appendValue('Math.sqrt(')">√</button>
+        <button onclick="appendValue('Math.pow(')">^</button>
+    </div>
+
+    <!-- Row 6 -->
+    <div class="row">
+        <button onclick="appendValue('Math.PI')">π</button>
+        <button onclick="appendValue('Math.E')">e</button>
+        <button onclick="appendValue('%')">%</button>
+        <button onclick="appendValue('1/')">1/x</button>
+        <button onclick="appendValue('**')">x²</button>
+    </div>
+
+    <!-- Row 7 -->
+    <div class="row">
+        <button onclick="appendValue('Math.floor(')">floor</button>
+        <button onclick="appendValue('Math.ceil(')">ceil</button>
+        <button onclick="appendValue('Math.abs(')">abs</button>
+        <button onclick="appendValue('Math.round(')">round</button>
+        <button onclick="appendValue('Math.random()')">rand</button>
+    </div>
+
+    <!-- Row 8 -->
+    <div class="row">
+        <button onclick="appendValue('Math.sin(Math.PI/2)')">sin90°</button>
+        <button onclick="appendValue('Math.cos(Math.PI)')">cos180°</button>
+        <button onclick="appendValue('Math.tan(Math.PI/4)')">tan45°</button>
+        <button onclick="appendValue('Math.log10(')">log10</button>
+        <button onclick="appendValue('Math.exp(1)')">e¹</button>
+    </div>
+
+    <!-- Row 9 -->
+    <div class="row">
+        <button onclick="calculate()" style="background-color:#4CAF50;color:white;">=</button>
+        <button onclick="clearDisplay()" style="background-color:#f44336;color:white;">AC</button>
+        <button onclick="appendValue('**0.5')">√x</button>
+        <button onclick="appendValue('Math.pow(')">xʸ</button>
+        <button onclick="appendValue('Math.log(')">ln</button>
+    </div>
+</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
