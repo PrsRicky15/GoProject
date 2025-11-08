@@ -3,12 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="basic.css">
+    <link rel="stylesheet" href="dark.css", id="dark-theme">
+    <link rel="stylesheet" href="light.css", id="light-theme">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
     <title>Quantum Mechanics - Explore the Subatomic World</title>
 </head>
 
 <body>
+
+<button id="theme-toggle">Change Mode</button>
+
+<script>
+    const html = document.documentElement;
+    const lightTheme = document.getElementById('light-theme');
+    const darkTheme = document.getElementById('dark-theme');
+    const toggle = document.getElementById('theme-toggle');
+
+    function setTheme(theme) {
+        if (theme === 'dark') {
+            lightTheme.disabled = true;
+            darkTheme.disabled = false;
+        } else {
+            lightTheme.disabled = false;
+            darkTheme.disabled = true;
+        }
+        localStorage.setItem('theme', theme);
+    }
+
+    // Load saved preference
+    const savedTheme = localStorage.getItem('theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(savedTheme);
+
+    toggle.addEventListener('click', () => {
+        const current = localStorage.getItem('theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+    });
+</script>
+
 <div class="container">
     <h1>Quantum Mechanics</h1>
     <div class="divider"></div>
