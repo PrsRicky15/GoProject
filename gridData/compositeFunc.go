@@ -1,7 +1,7 @@
 package gridData
 
-// compositeFunc multiplication of two function
-type compositeFunc[T VarType] struct {
+// CompositeFunc multiplication of two function
+type CompositeFunc[T VarType] struct {
 	func1 PotentialOp[T]
 	func2 PotentialOp[T]
 }
@@ -15,24 +15,33 @@ func compositeOnGrid[T VarType](f func(T) T, f2 func(T) T, x []T) []T {
 	return results
 }
 
-// CompositeF64 For float64 specialization
-type CompositeF64 compositeFunc[float64]
+// compositeOnGrid Made generic to work with VarType
+func compositeOnGridInPlace[T VarType](f func(T) T, f2 func(T) T, fn, x []T) {
+	for i, val := range x {
+		fn[i] = f(val) * f2(val)
+	}
+}
 
-// CompositeZ64 For complex64 specialization
-type CompositeZ64 compositeFunc[complex128]
-
-func (cF compositeFunc[T]) EvaluateAt(x T) T {
+func (cF CompositeFunc[T]) EvaluateAt(x T) T {
 	return cF.func1.EvaluateAt(x) * cF.func2.EvaluateAt(x)
 }
 
-func (cF compositeFunc[T]) ForceAt(x T) T {
+func (cF CompositeFunc[T]) ForceAt(x T) T {
 	return cF.func1.ForceAt(x) * cF.func2.ForceAt(x)
 }
 
-func (cF compositeFunc[T]) EvaluateOnGrid(x []T) []T {
+func (cF CompositeFunc[T]) EvaluateOnGrid(x []T) []T {
 	return compositeOnGrid(cF.func1.EvaluateAt, cF.func2.EvaluateAt, x)
 }
 
-func (cF compositeFunc[T]) ForceOnGrid(x []T) []T {
+func (cF CompositeFunc[T]) ForceOnGrid(x []T) []T {
 	return compositeOnGrid(cF.func1.ForceAt, cF.func2.ForceAt, x)
+}
+
+func (cF CompositeFunc[T]) EvaluateOnGridInPlace(fn, x []T) {
+	compositeOnGridInPlace(cF.func1.EvaluateAt, cF.func2.EvaluateAt, fn, x)
+}
+
+func (cF CompositeFunc[T]) ForceOnGridInPlace(fn, x []T) {
+	compositeOnGridInPlace(cF.func1.ForceAt, cF.func2.ForceAt, fn, x)
 }
