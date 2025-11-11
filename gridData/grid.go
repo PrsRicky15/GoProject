@@ -206,3 +206,11 @@ func (g *RadGrid) PrintVectorToFileZ(vec []complex128, filename string, format s
 	err := vectorToFile(g, vec, filename, format)
 	return err
 }
+
+func RVecToComplexVec(rVec []float64) []complex128 {
+	result := make([]complex128, len(rVec))
+	for i := 0; i < len(rVec); i++ {
+		result[i] = complex(rVec[i], 0)
+	}
+	return result
+}

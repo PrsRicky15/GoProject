@@ -25,14 +25,12 @@ func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[flo
 	}
 }
 
-func (op *HamiltonianOp) Mat() {
+func (op *HamiltonianOp) Mat() error {
 	vPot := op.grid.PotentialOnGrid(op.potE)
 	err := op.grid.PrintVectorToFileRe(vPot, "potent.dat", "%21.14e")
 	if err != nil {
-		return
+		return err
 	}
-	// need a change
-	op.hmat = op.kinE.KMat
 
 	for i := 0; i < int(op.grid.NPoints()); i++ {
 		op.hmat.(*mat.Dense).Set(i, i, op.hmat.At(i, i)+vPot[i])

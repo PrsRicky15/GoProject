@@ -11,5 +11,5 @@ func TestKeDVR_Evaluate(t *testing.T) {
 		panic(err)
 	}
 	kinE := NewKeDVR(rgrid, 1.)
-	kinE.Mat()
+	kinE.GetMat()
 }

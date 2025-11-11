@@ -7,16 +7,16 @@ type MatrixOp interface {
 }
 
 type CanTimeSolverOp interface {
-	ExpDtTo(At float64, In []float64, Out []float64)
-	ExpDtInPlace(At float64, InOut []float64)
+	ExpDtTo(At float64, In []float64, Out []float64) error
+	ExpDtInPlace(At float64, InOut []float64) error
 }
 
 type TimeSolverOp interface {
-	ExpDtTo(Dt float64, In []float64, Out []float64)
-	ExpDtInPlace(Dt float64, InOut []float64)
+	ExpDtTo(Dt float64, In []float64, Out []float64) error
+	ExpDtInPlace(Dt float64, InOut []float64) error
 
-	ExpIdtTo(Dt float64, In []complex128, Out []complex128)
-	ExpIdtInPlace(Dt float64, InOut []complex128)
+	ExpIdtTo(Dt float64, In []complex128, Out []complex128) error
+	ExpIdtInPlace(Dt float64, InOut []complex128) error
 }
 
 type MomentumOp interface {
