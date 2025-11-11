@@ -14,8 +14,10 @@ type VarType interface {
 type PotentialOp[T VarType] interface {
 	EvaluateAt(x T) T
 	EvaluateOnGrid(x []T) []T
+	EvaluateOnGridInPlace(fn, x []T)
 	ForceAt(x T) T
 	ForceOnGrid(x []T) []T
+	ForceOnGridInPlace(fn, x []T)
 }
 
 // Made generic to work with VarType
@@ -25,6 +27,13 @@ func onGrid[T VarType](f func(T) T, x []T) []T {
 		results[i] = f(val)
 	}
 	return results
+}
+
+// Made generic to work with VarType
+func onGridInPlace[T VarType](f func(T) T, fn, x []T) {
+	for i, val := range x {
+		fn[i] = f(val)
+	}
 }
 
 // Morse v(r)= De (1 - Exp(-(r-re))^2
@@ -72,13 +81,12 @@ func (m Morse[T]) ForceAt(x T) T {
 	return result.(T)
 }
 
-func (m Morse[T]) EvaluateOnGrid(x []T) []T {
-	return onGrid(m.EvaluateAt, x)
-}
-
+func (m Morse[T]) EvaluateOnGrid(x []T) []T        { return onGrid(m.EvaluateAt, x) }
+func (m Morse[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(m.EvaluateAt, fn, x) }
 func (m Morse[T]) ForceOnGrid(x []T) []T {
 	return onGrid(m.ForceAt, x)
 }
+func (m Morse[T]) ForceOnGridInPlace(fn, x []T) { onGridInPlace(m.ForceAt, fn, x) }
 
 // MorseF64 For float64 specialization
 type MorseF64 Morse[float64]
@@ -158,10 +166,11 @@ func (sc SoftCore[T]) ForceAt(x T) T {
 func (sc SoftCore[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(sc.EvaluateAt, x)
 }
-
 func (sc SoftCore[T]) ForceOnGrid(x []T) []T {
 	return onGrid(sc.ForceAt, x)
 }
+func (sc SoftCore[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(sc.EvaluateAt, fn, x) }
+func (sc SoftCore[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(sc.ForceAt, fn, x) }
 
 // SoftCoreF64 For float64 specialization
 type SoftCoreF64 SoftCore[float64]
@@ -240,10 +249,11 @@ func (g Gaussian[T]) ForceAt(x T) T {
 func (g Gaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(g.EvaluateAt, x)
 }
-
 func (g Gaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(g.ForceAt, x)
 }
+func (g Gaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(g.EvaluateAt, fn, x) }
+func (g Gaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(g.ForceAt, fn, x) }
 
 func xBySigma(x float64, sigma float64) float64 {
 	return x / sigma
@@ -327,10 +337,11 @@ func (mg MultiGaussian[T]) ForceAt(x T) T {
 func (mg MultiGaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(mg.EvaluateAt, x)
 }
-
 func (mg MultiGaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(mg.ForceAt, x)
 }
+func (mg MultiGaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(mg.EvaluateAt, fn, x) }
+func (mg MultiGaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(mg.ForceAt, fn, x) }
 
 type MultiGaussF64 MultiGaussian[float64]
 
@@ -478,10 +489,11 @@ func (sg SuperGaussian[T]) ForceAt(x T) T {
 func (sg SuperGaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(sg.EvaluateAt, x)
 }
-
 func (sg SuperGaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(sg.ForceAt, x)
 }
+func (sg SuperGaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(sg.EvaluateAt, fn, x) }
+func (sg SuperGaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(sg.ForceAt, fn, x) }
 
 type SupGaussF64 SuperGaussian[float64]
 
@@ -556,10 +568,11 @@ func (h Harmonic[T]) ForceAt(x T) T {
 func (h Harmonic[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(h.EvaluateAt, x)
 }
-
 func (h Harmonic[T]) ForceOnGrid(x []T) []T {
 	return onGrid(h.ForceAt, x)
 }
+func (h Harmonic[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(h.EvaluateAt, fn, x) }
+func (h Harmonic[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(h.ForceAt, fn, x) }
 
 type HarmonicF64 Harmonic[float64]
 
@@ -663,10 +676,11 @@ func (p Polynomial[T]) ForceAt(x T) T {
 func (p Polynomial[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(p.EvaluateAt, x)
 }
-
 func (p Polynomial[T]) ForceOnGrid(x []T) []T {
 	return onGrid(p.ForceAt, x)
 }
+func (p Polynomial[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(p.EvaluateAt, fn, x) }
+func (p Polynomial[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(p.ForceAt, fn, x) }
 
 type PolynomialF64 Polynomial[float64]
 
