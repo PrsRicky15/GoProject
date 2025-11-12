@@ -86,3 +86,56 @@ func (a timeIndependentAdapter[T]) ForceAtT(x T, t float64) T { return a.base.Fo
 func (a timeIndependentAdapter[T]) EvaluateOnGridT(x []T, t float64) []T { return a.base.EvaluateOnGrid(x) }
 func (a timeIndependentAdapter[T]) ForceOnGridT(x []T, t float64) []T { return a.base.ForceOnGrid(x) }
 
+//    V(x,t) = Morse(x) + E_0*cos(omega t) * x
+type DrivenMorse[T VarType] struct {
+	Morse     Morse[T]
+	FieldAmp  float64
+	Freq float64
+}
+
+func (dm DrivenMorse[T]) String() string {
+	return fmt.Sprintf(" Morse + E_0*cos(omega t)*x, where, FieldAmp: %g, Freq: %g", dm.FieldAmp, dm.Freq)
+}
+
+// Time-independent adaptations
+func (dm DrivenMorse[T]) EvaluateAt(x T) T { return dm.Morse.EvaluateAt(x) }
+func (dm DrivenMorse[T]) ForceAt(x T) T    { return dm.Morse.ForceAt(x) }
+func (dm DrivenMorse[T]) EvaluateOnGrid(x []T) []T {
+	return dm.Morse.EvaluateOnGrid(x)
+}
+func (dm DrivenMorse[T]) ForceOnGrid(x []T) []T {
+	return dm.Morse.ForceOnGrid(x)
+}
+
+// Time-dependent implementations
+func (dm DrivenMorse[T]) EvaluateAtT(x T, t float64) T {
+	base := dm.Morse.EvaluateAt(x)
+	oscill := dm.FieldAmp * math.Cos(d.Freq*t)
+	switch any(x).(type) {
+	case float64:
+		return any(any(base).(float64) + oscill*any(x).(float64)).(T)
+	case complex128:
+		xx := any(x).(complex128)
+		add := complex(oscill*real(xx), oscill*imag(xx))
+		return any(any(base).(complex128) + add).(T)
+	default:
+		panic("unsupported type")
+	}
+}
+
+func (dm DrivenMorse[T]) ForceAtT(x T, t float64) T {
+	base := dm.Morse.ForceAt(x)
+	oscill := dm.FieldAmp * math.Cos(d.Freq*t)
+	switch any(x).(type) {
+	case float64:
+		return any(any(base).(float64) + oscill).(T)
+	case complex128:
+		return any(any(base).(complex128) + complex(oscill, 0)).(T)
+	default:
+		panic("unsupported type")
+	}
+}
+
+func (dm DrivenMorse[T]) EvaluateOnGridT(x []T, t float64) []T { return onGridT(d.EvaluateAtT, x, t) }
+func (dm DrivenMorse[T]) ForceOnGridT(x []T, t float64) []T { return onGridT(d.ForceAtT, x, t) }
+
