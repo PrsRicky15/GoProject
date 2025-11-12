@@ -26,8 +26,8 @@ type TDPotentialOp interface {
 	ForceOnGrid(x []T) []T
 
 	EvaluateAtT(x T, t float64) T
-	EvaluateOnGrid(x []T, t float 64) []T
-	ForceAtT(x T, t float 64) T
+	EvaluateOnGrid(x []T, t float64) []T
+	ForceAtT(x T, t float64) T
 	ForceOnGrid(x []T, t float64) []T
 }
 
@@ -74,7 +74,7 @@ func (a timeIndependentAdapter[T]) EvaluateOnGrid(x []T) []T{
 	return a.base.EvaluateOnGrid(x)
 }
 func (a timeIndependentAdapter[T]) ForceAt(x T) T{
-	return a.base.ForceAt)(x
+	return a.base.ForceAt(x)
 }
 func (a timeIndependentAdapter[T]) ForceOnGrid(x []T) []T {
 	return a.base.ForceOnGrid(x)
