@@ -1,5 +1,10 @@
 package gridData
 
+import (
+	"fmt"
+	"math"
+)
+
 // TDPotentialOp General interface for the evaluating the potential on a grid
 // type TDPotentialOp interface {
 // 	EvaluateAt(x float64, t float64) float64
@@ -7,34 +12,21 @@ package gridData
 // 	EvaluateOnRGridInPlace(x, res []float64, t float64)
 // }
 
-import (
-	"fmt"
-	"math"
-	"math/cmplx"
-)
-
-type VarType interface {
-	float64 | complex128
-}
-
 // TDPotentialOp General interface for evaluating the potential on a grid
 
-type TDPotentialOp interface {
-	EvaluateAt(x T) T
-	EvaluateOnGrid(x []T) []T
-	ForceAt(x T) T
-	ForceOnGrid(x []T) []T
+type TDPotentialOp[T VarType] interface {
+	PotentialOp[T]
 
 	EvaluateAtT(x T, t float64) T
-	EvaluateOnGrid(x []T, t float64) []T
+	EvaluateOnGridT(x []T, t float64) []T
 	ForceAtT(x T, t float64) T
-	ForceOnGrid(x []T, t float64) []T
+	ForceOnGridT(x []T, t float64) []T
 }
 
 // V(x,t) for array x, at time t
 
 func onGridT[T VarType](f func(T, float64) T, x []T, t float64) []T {
-	results :- make([]T, len(x))
+	results := make([]T, len(x))
 	for i, val := range x {
 		results[i] = f(val, t)
 	}
@@ -43,14 +35,14 @@ func onGridT[T VarType](f func(T, float64) T, x []T, t float64) []T {
 
 // Experimental: adapter so that any time independent argument
 
-func switchPotential[T VarType](v any) TDPotentialOp[T] {
-	switch potential := v.(type) {
+func switchPotential[T VarType](p any) TDPotentialOp[T] {
+	switch potential := p.(type) {
 
 	case TDPotentialOp[T]:
-		return v
+		return potential
 
 	case PotentialOp[T]:
-		return timeIndependentAdapter[T]{base: v}
+		return timeIndependentAdapter[T]{base: potential}
 
 	default:
 		panic("Make potential great again")
@@ -60,37 +52,38 @@ func switchPotential[T VarType](v any) TDPotentialOp[T] {
 // PotentialOp[T] will run on PotentialOpT[T] by ignoring the time argument
 
 type timeIndependentAdapter[T VarType] struct {
-	base PontentialOp[T]
+	base PotentialOp[T]
 }
 
-func adaptTimeIndependent[T VarType](op PotentialOp[T]) PotentialOpT[T] {
+func adaptTimeIndependent[T VarType](op PotentialOp[T]) TDPotentialOp[T] {
 	return timeIndependentAdapter[T]{base: op}
 }
 
-func (a timeIndependentAdapter[T]) EvaluateAt(x T) T{
+func (a timeIndependentAdapter[T]) EvaluateAt(x T) T {
 	return a.base.EvaluateAt(x)
 }
-func (a timeIndependentAdapter[T]) EvaluateOnGrid(x []T) []T{
+func (a timeIndependentAdapter[T]) EvaluateOnGrid(x []T) []T {
 	return a.base.EvaluateOnGrid(x)
 }
-func (a timeIndependentAdapter[T]) ForceAt(x T) T{
+func (a timeIndependentAdapter[T]) ForceAt(x T) T {
 	return a.base.ForceAt(x)
 }
 func (a timeIndependentAdapter[T]) ForceOnGrid(x []T) []T {
 	return a.base.ForceOnGrid(x)
 }
 
-
 func (a timeIndependentAdapter[T]) EvaluateAtT(x T, t float64) T { return a.base.EvaluateAt(x) }
-func (a timeIndependentAdapter[T]) ForceAtT(x T, t float64) T { return a.base.ForceAt(x) }
-func (a timeIndependentAdapter[T]) EvaluateOnGridT(x []T, t float64) []T { return a.base.EvaluateOnGrid(x) }
+func (a timeIndependentAdapter[T]) ForceAtT(x T, t float64) T    { return a.base.ForceAt(x) }
+func (a timeIndependentAdapter[T]) EvaluateOnGridT(x []T, t float64) []T {
+	return a.base.EvaluateOnGrid(x)
+}
 func (a timeIndependentAdapter[T]) ForceOnGridT(x []T, t float64) []T { return a.base.ForceOnGrid(x) }
 
-//    V(x,t) = Morse(x) + E_0*cos(omega t) * x
+// V(x,t) = Morse(x) + E_0*cos(omega t) * x
 type DrivenMorse[T VarType] struct {
-	Morse     Morse[T]
-	FieldAmp  float64
-	Freq float64
+	Morse    Morse[T]
+	FieldAmp float64
+	Freq     float64
 }
 
 func (dm DrivenMorse[T]) String() string {
@@ -110,7 +103,7 @@ func (dm DrivenMorse[T]) ForceOnGrid(x []T) []T {
 // Time-dependent implementations
 func (dm DrivenMorse[T]) EvaluateAtT(x T, t float64) T {
 	base := dm.Morse.EvaluateAt(x)
-	oscill := dm.FieldAmp * math.Cos(d.Freq*t)
+	oscill := dm.FieldAmp * math.Cos(dm.Freq*t)
 	switch any(x).(type) {
 	case float64:
 		return any(any(base).(float64) + oscill*any(x).(float64)).(T)
@@ -125,7 +118,7 @@ func (dm DrivenMorse[T]) EvaluateAtT(x T, t float64) T {
 
 func (dm DrivenMorse[T]) ForceAtT(x T, t float64) T {
 	base := dm.Morse.ForceAt(x)
-	oscill := dm.FieldAmp * math.Cos(d.Freq*t)
+	oscill := dm.FieldAmp * math.Cos(dm.Freq*t)
 	switch any(x).(type) {
 	case float64:
 		return any(any(base).(float64) + oscill).(T)
@@ -136,6 +129,5 @@ func (dm DrivenMorse[T]) ForceAtT(x T, t float64) T {
 	}
 }
 
-func (dm DrivenMorse[T]) EvaluateOnGridT(x []T, t float64) []T { return onGridT(d.EvaluateAtT, x, t) }
-func (dm DrivenMorse[T]) ForceOnGridT(x []T, t float64) []T { return onGridT(d.ForceAtT, x, t) }
-
+func (dm DrivenMorse[T]) EvaluateOnGridT(x []T, t float64) []T { return onGridT(dm.EvaluateAtT, x, t) }
+func (dm DrivenMorse[T]) ForceOnGridT(x []T, t float64) []T    { return onGridT(dm.ForceAtT, x, t) }
