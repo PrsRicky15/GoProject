@@ -22,7 +22,7 @@ func main() {
 
     // Enable CORS
     c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:8080"},
+        AllowedOrigins:   []string{"http://localhost:5173"},
         AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
         AllowedHeaders:   []string{"Content-Type"},
         AllowCredentials: true,

@@ -9,6 +9,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Homepage />} />
                 <Route path="/plots" element={<PlotGenerator />} />
+                <Route path="/webmanual" />
             </Routes>
         </BrowserRouter>
     )

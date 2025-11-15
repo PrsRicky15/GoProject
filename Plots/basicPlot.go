@@ -4,6 +4,8 @@ import (
     "encoding/json"
     "math"
     "net/http"
+
+    "GoProject/gridData"
 )
 
 type PlotRequest struct {
@@ -20,9 +22,12 @@ type PlotDataResponse struct {
 // Generate 1D potential energy surface data
 func generatePotentialSurfaceData(params map[string]interface{}) PlotDataResponse {
     // Generate data points
-    numPoints := 200
-    x := make([]float64, numPoints)
-    y := make([]float64, numPoints)
+    // numPoints := 200
+    // x := make([]float64, numPoints)
+    // y := make([]float64, numPoints)
+
+    // Default grid for plots
+    grid, _ := gridData.NewRGrid(0, 50, 200)
 
     // Get parameters with defaults
     D := 100.0  // Dissociation energy
@@ -39,11 +44,17 @@ func generatePotentialSurfaceData(params map[string]interface{}) PlotDataRespons
         r0 = val
     }
 
-    for i := 0; i < numPoints; i++ {
-        x[i] = float64(i) * 0.05
-        // Morse potential: D * (1 - exp(-a*(x-r0)))^2
-        y[i] = D * math.Pow(1-math.Exp(-a*(x[i]-r0)), 2)
-    }
+
+    morse := gridData.Morse[float64]{De: D, Alpha: a, Cen: r0}
+
+    x := grid.RValues()
+    y := grid.PotentialOnGrid(morse)
+
+    // for i := 0; i < numPoints; i++ {
+    //    x[i] = float64(i) * 0.05
+    //    // Morse potential: D * (1 - exp(-a*(x-r0)))^2
+    //    y[i] = D * math.Pow(1-math.Exp(-a*(x[i]-r0)), 2)
+    // }
 
     trace := map[string]interface{}{
         "x":    x,
