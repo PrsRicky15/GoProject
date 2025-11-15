@@ -96,7 +96,7 @@ func generatePotentialSurfaceData(params map[string]interface{}) PlotDataRespons
 }
 
 // Main handler
-func generatePlotData(w http.ResponseWriter, r *http.Request) {
+func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
     var req PlotRequest
     err := json.NewDecoder(r.Body).Decode(&req)
     if err != nil {
