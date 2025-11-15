@@ -25,9 +25,11 @@ type KeDvrBasis struct {
 	kMatCached  bool
 }
 
-func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) {
-	//TODO implement me
-	panic("implement me")
+func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) error {
+	if len(In) != len(Out) {
+		return error("Vector dimensions do not match")
+	}
+	return nil
 }
 
 func (k *KeDvrBasis) ExpIdtTo(Dt float64, In []complex128, Out []complex128) {

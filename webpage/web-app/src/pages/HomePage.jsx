@@ -182,6 +182,9 @@ export default function QuantumChemistryHomepage() {
 
       {/* Use Cases */}
       <SolutionsSection />
+        <div><a href="basic.html"></a>
+            <button>Quantum Mechanics →</button>
+        </div>
 
       {/* Footer */}
       <footer className="relative z-10 px-6 py-12 border-t border-white/10">
