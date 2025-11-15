@@ -14,7 +14,7 @@ import (
 
 // TDPotentialOp General interface for evaluating the potential on a grid
 
-type TDPotentialOp[T VarType] interface {
+type TDPotentialOp[float64] interface {
 	PotentialOp[T]
 
 	EvaluateAtT(x T, t float64) T
