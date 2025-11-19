@@ -3,6 +3,7 @@ package Plots
 import (
     "encoding/json"
     "net/http"
+    "slices"
 
     "GoProject/gridData"
 )
@@ -106,6 +107,87 @@ func generateMorsePotentialSurfaceData(params map[string]interface{}) PlotDataRe
     }
 }
 
+// Generate 1D potential energy surface data
+func generateSoftcorePotentialSurfaceData(params map[string]interface{}) PlotDataResponse {
+    // Default grid for plots
+    grid, _ := gridData.NewRGrid(-50, 50, 200)
+
+    // Get parameters with defaults
+    charge := 1.0  // Dissociation energy
+    a := 1.5    // Width parameter
+    r0 := 2.0   // Equilibrium distance
+
+    if val, ok := params["Charge"].(float64); ok {
+        charge = val
+    }
+    if val, ok := params["a"].(float64); ok {
+        a = val
+    }
+    if val, ok := params["r0"].(float64); ok {
+        r0 = val
+    }
+
+
+    sc := gridData.SoftCore[float64]{Charge: charge, Centre: r0, SoftParam: a}
+
+    x := grid.RValues()
+    y := grid.PotentialOnGrid(sc)
+
+    ymin := slices.Min(y)
+    ymax := slices.Max(y)
+
+    trace := map[string]interface{}{
+        "x":    x,
+        "y":    y,
+        "type": "scatter",
+        "mode": "lines",
+        "name": "Potential Energy",
+        "line": map[string]interface{}{
+            "color": "rgb(147, 51, 234)",
+            "width": 3,
+        },
+    }
+
+    layout := map[string]interface{}{
+        "title": map[string]interface{}{
+            "text": "Potential Energy Surface",
+            "font": map[string]interface{}{
+                "size":  24,
+                "color": "white",
+            },
+        },
+        "xaxis": map[string]interface{}{
+            "title": map[string]interface{}{
+                "text": "Distance (a.u.)",
+                "font": map[string]interface{}{"color": "white"},
+            },
+            "gridcolor": "rgba(255,255,255,0.1)",
+            "color":     "white",
+        },
+        "yaxis": map[string]interface{}{
+            "title": map[string]interface{}{
+                "text": "Energy (a.u.)",
+                "font": map[string]interface{}{"color": "white"},
+            },
+            "gridcolor": "rgba(255,255,255,0.1)",
+            "color":     "white",
+            "range":     []float64{ymin-1, ymax+1},
+        },
+        "plot_bgcolor":  "rgba(0,0,0,0)",
+        "paper_bgcolor": "rgba(0,0,0,0)",
+        "font": map[string]interface{}{
+            "color": "white",
+        },
+    }
+
+    return PlotDataResponse{
+        Data:   []map[string]interface{}{trace},
+        Layout: layout,
+        Status: "completed",
+    }
+}
+
+
 // Main handler
 func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
     var req PlotRequest
@@ -120,6 +202,8 @@ func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
     switch req.PlotType {
     case "Morse":
         response = generateMorsePotentialSurfaceData(req.Parameters)
+    case "Softcore":
+        response = generateSoftcorePotentialSurfaceData(req.Parameters)
     default:
         http.Error(w, "Unknown plot type", http.StatusBadRequest)
         return

@@ -16,7 +16,7 @@ export default function PlotGenerator() {
 
   const plotTypes = [
     { value: 'Morse', label: 'Morse Potential' },
-    { value: 'contour', label: '2D Contour Plot' },
+    { value: 'Softcore', label: 'Softcore Potential' },
     { value: 'surface_3d', label: '3D Surface Plot' },
     { value: 'energy_levels', label: 'Energy Level Diagram' },
   ];
@@ -121,6 +121,55 @@ export default function PlotGenerator() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">
                     Equilibrium Distance (r₀)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={parameters.r0}
+                    onChange={(e) =>
+                      setParameters({ ...parameters, r0: parseFloat(e.target.value) })
+                    }
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {plotType === 'Softcore' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    Charge (q)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={parameters.D}
+                    onChange={(e) =>
+                      setParameters({ ...parameters, D: parseFloat(e.target.value) })
+                    }
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    Softcore Parameter (a)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={parameters.a}
+                    onChange={(e) =>
+                      setParameters({ ...parameters, a: parseFloat(e.target.value) })
+                    }
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    Center (r₀)
                   </label>
                   <input
                     type="number"
