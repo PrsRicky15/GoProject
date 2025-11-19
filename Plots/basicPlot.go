@@ -2,7 +2,6 @@ package Plots
 
 import (
     "encoding/json"
-    "math"
     "net/http"
 
     "GoProject/gridData"
@@ -20,7 +19,7 @@ type PlotDataResponse struct {
 }
 
 // Generate 1D potential energy surface data
-func generatePotentialSurfaceData(params map[string]interface{}) PlotDataResponse {
+func generateMorsePotentialSurfaceData(params map[string]interface{}) PlotDataResponse {
     // Generate data points
     // numPoints := 200
     // x := make([]float64, numPoints)
@@ -78,7 +77,7 @@ func generatePotentialSurfaceData(params map[string]interface{}) PlotDataRespons
         },
         "xaxis": map[string]interface{}{
             "title": map[string]interface{}{
-                "text": "Distance (Å)",
+                "text": "Distance (a.u.)",
                 "font": map[string]interface{}{"color": "white"},
             },
             "gridcolor": "rgba(255,255,255,0.1)",
@@ -86,11 +85,12 @@ func generatePotentialSurfaceData(params map[string]interface{}) PlotDataRespons
         },
         "yaxis": map[string]interface{}{
             "title": map[string]interface{}{
-                "text": "Energy (kcal/mol)",
+                "text": "Energy (a.u.)",
                 "font": map[string]interface{}{"color": "white"},
             },
             "gridcolor": "rgba(255,255,255,0.1)",
             "color":     "white",
+            "range":     []float64{-10, D + 100},
         },
         "plot_bgcolor":  "rgba(0,0,0,0)",
         "paper_bgcolor": "rgba(0,0,0,0)",
@@ -118,8 +118,8 @@ func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
     var response PlotDataResponse
 
     switch req.PlotType {
-    case "potential_surface":
-        response = generatePotentialSurfaceData(req.Parameters)
+    case "Morse":
+        response = generateMorsePotentialSurfaceData(req.Parameters)
     default:
         http.Error(w, "Unknown plot type", http.StatusBadRequest)
         return

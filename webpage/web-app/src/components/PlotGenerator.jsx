@@ -4,7 +4,7 @@ import { BarChart3, Loader, Download, RefreshCw, Maximize2 } from 'lucide-react'
 import plotApi from '../api/plotApi';
 
 export default function PlotGenerator() {
-  const [plotType, setPlotType] = useState('potential_surface');
+  const [plotType, setPlotType] = useState('Morse');
   const [isGenerating, setIsGenerating] = useState(false);
   const [plotData, setPlotData] = useState(null);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export default function PlotGenerator() {
   });
 
   const plotTypes = [
-    { value: 'potential_surface', label: 'Potential Energy Surface (1D)' },
+    { value: 'Morse', label: 'Morse Potential' },
     { value: 'contour', label: '2D Contour Plot' },
     { value: 'surface_3d', label: '3D Surface Plot' },
     { value: 'energy_levels', label: 'Energy Level Diagram' },
@@ -86,7 +86,7 @@ export default function PlotGenerator() {
             </div>
 
             {/* Parameters - Show only for relevant plot types */}
-            {plotType === 'potential_surface' && (
+            {plotType === 'Morse' && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">
