@@ -43,6 +43,26 @@ func (RB *RectangleBarrier) EvaluateAt(x float64) float64 {
 	return 0
 }
 
+type Sinusoidal struct {
+	v0    float64
+	omega float64
+	phi   float64
+}
+
+func NewSin(v0, omega, phi float64) *Sinusoidal {
+	return &Sinusoidal{v0, omega, phi}
+}
+
+func (S *Sinusoidal) Redefine(v0, omega float64, phi float64) {
+	S.v0 = v0
+	S.omega = omega
+	S.phi = phi
+}
+
+func (S *Sinusoidal) EvaluateAt(x float64) float64 {
+	return S.v0 * math.Sin(x*S.omega+S.phi)
+}
+
 type FuncWrapper struct {
 	Fn func(float64) float64
 }
@@ -259,7 +279,7 @@ func (g Gaussian[T]) EvaluateAt(x T) T {
 	switch any(x).(type) {
 	case float64:
 		gf64 := Gaussianf64(g)
-		result = gf64.evaluateAt(any(x).(float64))
+		result = gf64.EvaluateAt(any(x).(float64))
 	case complex128:
 		gz64 := GaussianZ64(g)
 		result = gz64.evaluateAt(any(x).(complex128))
@@ -276,7 +296,7 @@ func (g Gaussian[T]) ForceAt(x T) T {
 	switch any(x).(type) {
 	case float64:
 		gf64 := Gaussianf64(g)
-		result = gf64.forceAt(any(x).(float64))
+		result = gf64.ForceAt(any(x).(float64))
 	case complex128:
 		gz64 := GaussianZ64(g)
 		result = gz64.forceAt(any(x).(complex128))
@@ -303,12 +323,12 @@ func xBySigmaZ64(x complex128, sigma float64) complex128 { return x / complex(si
 
 type Gaussianf64 Gaussian[float64]
 
-func (g Gaussianf64) evaluateAt(x float64) float64 {
+func (g Gaussianf64) EvaluateAt(x float64) float64 {
 	expnt := xBySigma(x-g.Cen, g.Sigma)
 	return g.Strength * math.Exp(-expnt*expnt/2.)
 }
 
-func (g Gaussianf64) forceAt(x float64) float64 {
+func (g Gaussianf64) ForceAt(x float64) float64 {
 	expnt := xBySigma(x-g.Cen, g.Sigma)
 	val := -g.Strength * expnt / g.Sigma
 	return val * math.Exp(-expnt*expnt/2)
