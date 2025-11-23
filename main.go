@@ -7,5 +7,5 @@ import (
 func main() {
 	model.Barrier()
 	model.CompositeFunction()
-
+	model.AnalyzeConvergence()
 }

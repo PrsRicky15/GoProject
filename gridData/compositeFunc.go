@@ -9,7 +9,12 @@ func NewProductFunc(func1 Rfunc, func2 Rfunc) *ProductFunc {
 	return &ProductFunc{func1, func2}
 }
 
-func (PF ProductFunc) EvaluateAt(x float64) float64 {
+func (PF *ProductFunc) Redefine(func1 Rfunc, func2 Rfunc) {
+	PF.func1 = func1
+	PF.func2 = func2
+}
+
+func (PF *ProductFunc) EvaluateAt(x float64) float64 {
 	return PF.func1.EvaluateAt(x) * PF.func2.EvaluateAt(x)
 }
 

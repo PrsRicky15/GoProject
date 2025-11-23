@@ -63,14 +63,6 @@ func (S *Sinusoidal) EvaluateAt(x float64) float64 {
 	return S.v0 * math.Sin(x*S.omega+S.phi)
 }
 
-type FuncWrapper struct {
-	Fn func(float64) float64
-}
-
-func (fw FuncWrapper) EvaluateAt(x float64) float64 {
-	return fw.Fn(x)
-}
-
 // PotentialOp General interface for the evaluating the potential on a grid
 type PotentialOp[T VarType] interface {
 	Function[T]
