@@ -10,9 +10,50 @@ type VarType interface {
 	float64 | complex128
 }
 
+type Function[T VarType] interface {
+	EvaluateAt(x T) T
+}
+
+type Rfunc interface {
+	EvaluateAt(x float64) float64
+}
+
+type RectangleBarrier struct {
+	vax []float64
+	ax  []float64
+}
+
+func NewRectBarrier(vax, ax []float64) *RectangleBarrier {
+	return &RectangleBarrier{vax: vax, ax: ax}
+}
+
+func (RB *RectangleBarrier) Redefine(vax, ax []float64) {
+	RB.ax = make([]float64, len(ax))
+	RB.vax = make([]float64, len(vax))
+	copy(RB.ax, ax)
+	copy(RB.vax, vax)
+}
+
+func (RB *RectangleBarrier) EvaluateAt(x float64) float64 {
+	for indx := range RB.ax {
+		if x < RB.ax[indx] {
+			return RB.vax[indx]
+		}
+	}
+	return 0
+}
+
+type FuncWrapper struct {
+	Fn func(float64) float64
+}
+
+func (fw FuncWrapper) EvaluateAt(x float64) float64 {
+	return fw.Fn(x)
+}
+
 // PotentialOp General interface for the evaluating the potential on a grid
 type PotentialOp[T VarType] interface {
-	EvaluateAt(x T) T
+	Function[T]
 	EvaluateOnGrid(x []T) []T
 	EvaluateOnGridInPlace(fn, x []T)
 	ForceAt(x T) T

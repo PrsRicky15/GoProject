@@ -146,6 +146,17 @@ func (g *RadGrid) KValues() []float64 { return generateConjugatePoints(g) }
 func (g *RadGrid) DisplayRGrid()      { displayGrid(g.RValues) }
 func (g *RadGrid) DisplayKGrid()      { displayGrid(g.KValues) }
 
+func (g *RadGrid) FunctionAtx(pot Rfunc, x float64) float64 {
+	return pot.EvaluateAt(x)
+}
+
+func (g *RadGrid) FunctionOnGridInPlace(pot Rfunc, f []float64) {
+	for i := range f {
+		x := g.rMin + g.gridData.deltaS*float64(i)
+		f[i] = pot.EvaluateAt(x)
+	}
+}
+
 func (g *RadGrid) PotentialAtR(pot PotentialOp[float64], x float64) float64 {
 	return pot.EvaluateAt(x)
 }
@@ -160,6 +171,7 @@ func (g *RadGrid) ForceAtZ(pot PotentialOp[complex128], x complex128) complex128
 func (g *RadGrid) PotentialOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.EvaluateOnGrid(g.RValues())
 }
+
 func (g *RadGrid) ForceOnGrid(pot PotentialOp[float64]) []float64 {
 	return pot.ForceOnGrid(g.RValues())
 }
