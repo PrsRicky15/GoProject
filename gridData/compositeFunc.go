@@ -18,12 +18,21 @@ func (PF *ProductFunc) EvaluateAt(x float64) float64 {
 	return PF.func1.EvaluateAt(x) * PF.func2.EvaluateAt(x)
 }
 
-type SumOfFunc struct {
+type SumFunc struct {
 	func1 Rfunc
 	func2 Rfunc
 }
 
-func (SF SumOfFunc) EvaluateAt(x float64) float64 {
+func NewSumFunc(func1 Rfunc, func2 Rfunc) *ProductFunc {
+	return &ProductFunc{func1, func2}
+}
+
+func (SF *SumFunc) Redefine(func1 Rfunc, func2 Rfunc) {
+	SF.func1 = func1
+	SF.func2 = func2
+}
+
+func (SF SumFunc) EvaluateAt(x float64) float64 {
 	return SF.func1.EvaluateAt(x) * SF.func2.EvaluateAt(x)
 }
 

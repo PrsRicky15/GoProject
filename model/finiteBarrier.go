@@ -124,13 +124,11 @@ func AnalyzeConvergence() {
 		fmt.Printf("%-10d %-20.10e %-20.10e %-20.10e\n", n, rectResult, trapResult, simpResult)
 	}
 
-	// Convergence rate analysis
 	fmt.Println("=== Convergence Rate Analysis ===")
 	fmt.Println("Rectangle Method: Expected O(h) = O(1/N)")
 	fmt.Println("Trapezoidal Method: Expected O(h^2) = O(1/N^2)")
 	fmt.Println("Simpson Method: Expected O(h^4) = O(1/N^4)")
 
-	// Calculate observed convergence rates
 	n1, n2 := 100, 1000
 	rect1 := math.Abs(Rectangle(f, a, b, n1) - expected)
 	rect2 := math.Abs(Rectangle(f, a, b, n2) - expected)
