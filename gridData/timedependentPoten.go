@@ -1,68 +1,119 @@
 package gridData
 
 type TDfunc interface {
-	EvaluateAt(x float64, t float64) float64
+	EvaluateAtTime(x float64, t float64) float64
 }
 
 // TDPotentialOp General interface for the evaluating the potential on a grid
 type TDPotentialOp interface {
 	TDfunc
-	EvaluateOnRGrid(x []float64, t float64) []float64
-	EvaluateOnRGridInPlace(x, res []float64, t float64)
+	EvaluateOnRGridTime(x []float64, t float64) []float64
+	EvaluateOnRGridTimeInPlace(x, res []float64, t float64)
 }
 
-// TDPotential Idea: compose - PotentialOp[float64]*f(x,t)
-type TDPotential struct {
-	Static PotentialOp[float64]
-	TDFunc func(x, t float64) float64
+type ProductFunc struct {
+	func1 Rfunc
+	func2 Rfunc
 }
 
-// NewTimeDependentPotential Constructor
-func NewTimeDependentPotential(static PotentialOp[float64],
-	tdTerm func(float64, float64) float64) *TDPotential {
-	return &TDPotential{
-		Static: static,
-		TDFunc: tdTerm,
+func NewProductFunc(func1 Rfunc, func2 Rfunc) *ProductFunc {
+	return &ProductFunc{func1, func2}
+}
+
+func (PF *ProductFunc) Redefine(func1 Rfunc, func2 Rfunc) {
+	PF.func1 = func1
+	PF.func2 = func2
+}
+
+func (PF *ProductFunc) EvaluateAt(x float64) float64 {
+	return PF.func1.EvaluateAt(x) * PF.func2.EvaluateAt(x)
+}
+func (PF *ProductFunc) EvaluateAtTime(x, t float64) float64 {
+	return PF.func1.EvaluateAt(x) * PF.func2.EvaluateAt(t)
+}
+
+type SumFunc struct {
+	func1 Rfunc
+	func2 Rfunc
+}
+
+func NewSumFunc(func1 Rfunc, func2 Rfunc) *ProductFunc {
+	return &ProductFunc{func1, func2}
+}
+
+func (SF *SumFunc) Redefine(func1 Rfunc, func2 Rfunc) {
+	SF.func1 = func1
+	SF.func2 = func2
+}
+
+func (SF *SumFunc) EvaluateAt(x float64) float64 {
+	return SF.func1.EvaluateAt(x) + SF.func2.EvaluateAt(x)
+}
+
+func (SF *SumFunc) EvaluateAtTime(x, t float64) float64 {
+	return SF.func1.EvaluateAt(x) + SF.func2.EvaluateAt(t)
+}
+
+type FuncWithTDPert struct {
+	tdFunc ProductFunc
+	tiFunc Rfunc
+}
+
+func NewFuncWithTDPert(func1 ProductFunc, func2 Rfunc) *FuncWithTDPert {
+	return &FuncWithTDPert{func1, func2}
+}
+
+func (SF *FuncWithTDPert) Redefine(func1 ProductFunc, func2 Rfunc) {
+	SF.tdFunc = func1
+	SF.tiFunc = func2
+}
+
+func (SF *FuncWithTDPert) EvaluateAtTime(x, t float64) float64 {
+	return SF.tiFunc.EvaluateAt(x) + SF.tdFunc.EvaluateAtTime(x, t)
+}
+
+// CompositePotentialOp multiplication of two function
+type CompositePotentialOp[T VarType] struct {
+	func1 PotentialOp[T]
+	func2 PotentialOp[T]
+}
+
+// compositeOnGrid Made generic to work with VarType
+func compositeOnGrid[T VarType](f func(T) T, f2 func(T) T, x []T) []T {
+	results := make([]T, len(x))
+	for i, val := range x {
+		results[i] = f(val) * f2(val)
+	}
+	return results
+}
+
+// compositeOnGrid Made generic to work with VarType
+func compositeOnGridInPlace[T VarType](f func(T) T, f2 func(T) T, fn, x []T) {
+	for i, val := range x {
+		fn[i] = f(val) * f2(val)
 	}
 }
 
-// EvaluateAt returns V_static(x) + V_time(x, t)
-func (tp *TDPotential) EvaluateAt(x float64, t float64) float64 {
-	var vstat float64
-	if tp.Static != nil {
-		vstat = tp.Static.EvaluateAt(x)
-	}
-	if tp.TDFunc == nil {
-		return vstat
-	}
-	return vstat + tp.TDFunc(x, t)
+func (cF CompositePotentialOp[T]) EvaluateAt(x T) T {
+	return cF.func1.EvaluateAt(x) * cF.func2.EvaluateAt(x)
 }
 
-func (tp *TDPotential) EvaluateOnRGrid(x []float64, t float64) []float64 {
-	res := make([]float64, len(x))
-	tp.EvaluateOnRGridInPlace(x, res, t)
-	return res
+func (cF CompositePotentialOp[T]) ForceAt(x T) T {
+	return cF.func1.ForceAt(x) * cF.func2.ForceAt(x)
 }
 
-// EvaluateOnRGridInPlace res[i] = V_static(x[i]) + V_td(x[i], t)
-func (tp *TDPotential) EvaluateOnRGridInPlace(x, res []float64, t float64) {
-	if len(x) != len(res) {
-		panic("EvaluateOnRGridInPlace: x and res must have equal length")
-	}
+func (cF CompositePotentialOp[T]) EvaluateOnGrid(x []T) []T {
+	return compositeOnGrid(cF.func1.EvaluateAt, cF.func2.EvaluateAt, x)
+}
 
-	if tp.Static != nil {
-		for i, xi := range x {
-			res[i] = tp.Static.EvaluateAt(xi)
-		}
-	} else {
-		for i := range res {
-			res[i] = 0
-		}
-	}
+func (cF CompositePotentialOp[T]) ForceOnGrid(x []T) []T {
+	return compositeOnGrid(cF.func1.ForceAt, cF.func2.ForceAt, x)
+}
 
-	if tp.TDFunc != nil {
-		for i, xi := range x {
-			res[i] += tp.TDFunc(xi, t)
-		}
-	}
+func (cF CompositePotentialOp[T]) EvaluateOnGridInPlace(fn, x []T) {
+	compositeOnGridInPlace(cF.func1.EvaluateAt, cF.func2.EvaluateAt, fn, x)
+}
+
+func (cF CompositePotentialOp[T]) ForceOnGridInPlace(fn, x []T) {
+	compositeOnGridInPlace(cF.func1.ForceAt, cF.func2.ForceAt, fn, x)
 }
