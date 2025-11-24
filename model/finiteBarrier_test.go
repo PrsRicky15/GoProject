@@ -5,18 +5,6 @@ import (
 	"testing"
 )
 
-func testFunc2(x float64) float64 {
-	return math.Sin(x)
-}
-
-func testFunc3(x float64) float64 {
-	return math.Exp(x)
-}
-
-func testFunc4(x float64) float64 {
-	return 1.0 / (1.0 + x*x)
-}
-
 func TestRectangleMethod(t *testing.T) {
 	tests := []struct {
 		name     string
