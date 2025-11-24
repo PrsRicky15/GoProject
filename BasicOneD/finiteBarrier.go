@@ -1,4 +1,4 @@
-package model
+package BasicOneD
 
 import (
 	"GoProject/gridData"

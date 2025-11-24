@@ -1,11 +1,11 @@
 package main
 
 import (
-	"GoProject/model"
+	"GoProject/BasicOneD"
 )
 
 func main() {
-	model.Barrier()
-	model.CompositeFunction()
-	model.AnalyzeConvergence()
+	BasicOneD.Barrier()
+	BasicOneD.CompositeFunction()
+	BasicOneD.AnalyzeConvergence()
 }
