@@ -46,7 +46,6 @@ func (tp *TimeDependentPotential) EvaluateOnRGrid(x []float64, t float64) []floa
 	return res
 }
 
-// EvaluateOnRGridInPlace eliminates allocations.
 // res[i] = V_static(x[i]) + V_td(x[i], t)
 func (tp *TimeDependentPotential) EvaluateOnRGridInPlace(x, res []float64, t float64) {
 	if len(x) != len(res) {
