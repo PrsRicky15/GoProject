@@ -17,6 +17,6 @@ func TestGaussian_ForceAt(t *testing.T) {
 		t.Errorf("expected tMax = %v, got %v", 200, grid.tMax)
 	}
 	if grid.nPoints != 2000 {
-		t.Errorf("expected nPoints = %v, got %v", 200, grid.nPoints)
+		t.Errorf("expected nPoints = %v, got %v", 2000, grid.nPoints)
 	}
 }

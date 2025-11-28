@@ -270,11 +270,15 @@ func (g Gaussian[T]) EvaluateAt(x T) T {
 
 	switch any(x).(type) {
 	case float64:
-		gf64 := Gaussianf64(g)
-		result = gf64.EvaluateAt(any(x).(float64))
+		xf := any(x).(float64)
+		expnt := (xf - g.Cen) / g.Sigma
+		result := g.Strength * math.Exp(-expnt*expnt/2.)
+		return any(result).(T)
 	case complex128:
-		gz64 := GaussianZ64(g)
-		result = gz64.evaluateAt(any(x).(complex128))
+		xc := any(x).(complex128)
+		expnt := (xc - complex(g.Cen, 0)) / complex(g.Sigma, 0)
+		result := complex(g.Strength, 0) * cmplx.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	default:
 		panic("unsupported type")
 	}
@@ -287,11 +291,17 @@ func (g Gaussian[T]) ForceAt(x T) T {
 
 	switch any(x).(type) {
 	case float64:
-		gf64 := Gaussianf64(g)
-		result = gf64.ForceAt(any(x).(float64))
+		xf := any(x).(float64)
+		expnt := (xf - g.Cen) / g.Sigma
+		val := -g.Strength * expnt / g.Sigma
+		result := val * math.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	case complex128:
-		gz64 := GaussianZ64(g)
-		result = gz64.forceAt(any(x).(complex128))
+		xc := any(x).(complex128)
+		expnt := (xc - complex(g.Cen, 0)) / complex(g.Sigma, 0)
+		val := -complex(g.Strength/g.Sigma, 0) * expnt
+		result := val * cmplx.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	default:
 		panic("unsupported type")
 	}
@@ -312,32 +322,6 @@ func xBySigma(x float64, sigma float64) float64 {
 	return x / sigma
 }
 func xBySigmaZ64(x complex128, sigma float64) complex128 { return x / complex(sigma, 0) }
-
-type Gaussianf64 Gaussian[float64]
-
-func (g Gaussianf64) EvaluateAt(x float64) float64 {
-	expnt := xBySigma(x-g.Cen, g.Sigma)
-	return g.Strength * math.Exp(-expnt*expnt/2.)
-}
-
-func (g Gaussianf64) ForceAt(x float64) float64 {
-	expnt := xBySigma(x-g.Cen, g.Sigma)
-	val := -g.Strength * expnt / g.Sigma
-	return val * math.Exp(-expnt*expnt/2)
-}
-
-type GaussianZ64 Gaussian[complex128]
-
-func (g GaussianZ64) evaluateAt(x complex128) complex128 {
-	val := xBySigmaZ64(x-complex(g.Cen, 0.), g.Sigma)
-	return complex(g.Strength, 0.) * cmplx.Exp(-cmplx.Pow(val, 2)/2)
-}
-
-func (g GaussianZ64) forceAt(x complex128) complex128 {
-	expnt := xBySigmaZ64(x-complex(g.Cen, 0.), g.Sigma)
-	val := -complex(g.Strength/g.Sigma, 0.) * expnt
-	return val * cmplx.Exp(-cmplx.Pow(expnt, 2)/complex(2, 0.))
-}
 
 // MultiGaussian PotentialOp
 type MultiGaussian[T VarType] struct {

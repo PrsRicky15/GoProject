@@ -5,7 +5,6 @@ import (
 )
 
 func main() {
-	BasicOneD.Barrier()
-	BasicOneD.CompositeFunction()
-	BasicOneD.AnalyzeConvergence()
+	BasicOneD.GaussianBarrier()
+	BasicOneD.SuperGaussianBarrier()
 }

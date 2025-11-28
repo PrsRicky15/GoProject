@@ -2,6 +2,7 @@ package BasicOneD
 
 import (
 	"GoProject/gridData"
+	"fmt"
 )
 
 func Barrier() {
@@ -31,6 +32,32 @@ func Barrier() {
 	}
 }
 
+func GaussianBarrier() {
+	grid, err := gridData.NewRGrid(-20, 20, 200)
+	if err != nil {
+		panic(err)
+	}
+	gauss := gridData.Gaussian[float64]{Strength: 1., Sigma: 2}
+	err = grid.PrintPotentToFileRe(gauss, "GaussBarrier.dat", "%21.14e")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("gauss:", gauss)
+}
+
+func SuperGaussianBarrier() {
+	grid, err := gridData.NewRGrid(-20, 20, 200)
+	if err != nil {
+		panic(err)
+	}
+	gauss := gridData.SuperGaussian[float64]{Strength: 1., Sigma: 2, Order: 6}
+	err = grid.PrintPotentToFileRe(gauss, "SuperGaussBarrier.dat", "%21.14e")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("gauss:", gauss)
+}
+
 func CompositeFunction() {
 	grid, err := gridData.NewRGrid(-10, 10, 200)
 	if err != nil {
@@ -38,7 +65,7 @@ func CompositeFunction() {
 	}
 
 	funcSin := gridData.NewSin(1., 3, 0.)
-	funcGauss := gridData.Gaussianf64{Sigma: 2, Strength: 1.}
+	funcGauss := gridData.Gaussian[float64]{Sigma: 2, Strength: 1.}
 	funcMult := gridData.NewProductFunc(funcSin, funcGauss)
 
 	fgrid := make([]float64, grid.NPoints())
