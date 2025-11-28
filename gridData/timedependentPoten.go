@@ -18,15 +18,8 @@ type TimeDependentPotential struct {
 }
 
 // Constructor
-func NewTimeDependentPotential(
-	static PotentialOp[float64],
-	tdTerm func(float64, float64) float64,
-) *TimeDependentPotential {
-	return &TimeDependentPotential{
-		Static: static,
-		TDFunc: tdTerm,
-	}
-}
+func NewTimeDependentPotential(static PotentialOp[float64], tdTerm func(float64, float64) float64,) 
+*TimeDependentPotential { return &TimeDependentPotential{ Static: static, TDFunc: tdTerm,}}
 
 // EvaluateAt returns V_static(x) + V_time(x, t)
 func (tp *TimeDependentPotential) EvaluateAt(x float64, t float64) float64 {
