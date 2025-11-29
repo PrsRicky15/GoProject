@@ -2,14 +2,25 @@ package BasicOneD
 
 import (
 	"GoProject/gridData"
+	"fmt"
+	"math"
+	"math/cmplx"
+	"os"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 type FiniteBarrier struct {
 	grid  *gridData.RadGrid
-	rFunc *gridData.Rfunc
+	rFunc gridData.Rfunc
+	mass  float64
+
+	nDelta uint
+	width  float64
+	v0     []float64
 }
 
-func NewFiniteBarrier(grid *gridData.RadGrid, rFunc *gridData.Rfunc) *FiniteBarrier {
+func NewFiniteBarrier(grid *gridData.RadGrid, rFunc gridData.Rfunc, mass float64) *FiniteBarrier {
 
 	if grid == nil || rFunc == nil {
 		panic("grid and rFunc must not be nil")
@@ -18,16 +29,116 @@ func NewFiniteBarrier(grid *gridData.RadGrid, rFunc *gridData.Rfunc) *FiniteBarr
 	return &FiniteBarrier{
 		grid:  grid,
 		rFunc: rFunc,
+		mass:  mass,
 	}
 }
 
-func (fb *FiniteBarrier) ReDefine(grid *gridData.RadGrid, rFunc *gridData.Rfunc) {
+func (fb *FiniteBarrier) ReDefine(grid *gridData.RadGrid, rFunc gridData.Rfunc) {
 	fb.rFunc = rFunc
 	fb.grid = grid
 }
 
-func (fb *FiniteBarrier) ReDefineFunc(rFunc *gridData.Rfunc) {
+func (fb *FiniteBarrier) ReDefineFunc(rFunc gridData.Rfunc, nDelta uint) {
 	fb.rFunc = rFunc
+	fb.nDelta = nDelta
+}
+
+func (fb *FiniteBarrier) MaxMinPotent() (float64, float64) {
+	var xmin float64
+	var xmax float64
+	for i := uint32(0); i < fb.grid.NPoints(); i++ {
+		x1 := fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
+		x2 := fb.grid.RMax() - float64(i)*fb.grid.DeltaR()
+		fx1 := fb.rFunc.EvaluateAt(x1)
+		fx2 := fb.rFunc.EvaluateAt(x2)
+		if fx1 > 1e-07 && fx2 > 1e-07 {
+			xmin = x1
+			xmax = x2
+		}
+	}
+	return xmin, xmax
+}
+
+func (fb *FiniteBarrier) ConvertFuncToBarrier(nDelta uint) float64 {
+	fb.v0 = make([]float64, nDelta)
+	xmin, xmax := fb.MaxMinPotent()
+
+	fb.width = (xmax - xmin) / float64(nDelta)
+
+	for i := uint32(0); i < fb.grid.NPoints(); i++ {
+		x := xmin + float64(i)*fb.width
+		fb.v0[i] = fb.rFunc.EvaluateAt(x)
+	}
+	return xmin
+}
+
+func (fb *FiniteBarrier) DisplayFuncToDeltaToFile(format string) {
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	for i := uint32(0); i < fb.grid.NPoints(); i++ {
+		x := fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
+		fmt.Printf(fullFormat, x, fb.rFunc.EvaluateAt(x))
+	}
+}
+
+func (fb *FiniteBarrier) PrintFuncToDeltaToFile(filename string, format string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	fullFormat := "%14.7e" + "\t" + format + "\n"
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	_, err = fmt.Fprintf(file, "#\t\t grid\t\t function value\n")
+	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
+	for i := uint32(0); i < fb.grid.NPoints(); i++ {
+		var x = fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
+		_, err := fmt.Fprintf(file, fullFormat, x, fb.rFunc.EvaluateAt(x))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (fb *FiniteBarrier) kVal(energy, v0 float64) complex128 {
+	diff := energy - v0
+	if diff >= 0 {
+		return complex(math.Sqrt(2*fb.mass*diff), 0)
+	}
+	return complex(0, math.Sqrt(2*fb.mass*(-diff)))
+}
+
+func (fb *FiniteBarrier) mMatrix(kL, kR float64) mat.CMatrix {
+
+	addK := complex((kL+kR)/(2*kR), 0)
+	subK := complex((kR-kL)/(2*kR), 0)
+
+	addKLen := complex(0, (kL+kR)*fb.grid.Length())
+	subKLen := complex(0, (kL-kR)*fb.grid.Length())
+
+	mMat := mat.NewCDense(2, 2, nil)
+	mMat.Set(0, 0, addK*cmplx.Exp(subKLen))
+	mMat.Set(0, 1, subK*cmplx.Exp(-addKLen))
+	mMat.Set(1, 0, subK*cmplx.Exp(addKLen))
+	mMat.Set(1, 1, addK*cmplx.Exp(subKLen))
+
+	return mMat
+}
+
+func (fb *FiniteBarrier) scattering(kL, kR float64, left []complex128) []complex128 {
+	mMat := fb.mMatrix(kL, kR)
+
+	result := make([]complex128, 2)
+	result[0] = mMat.At(0, 0)*left[0] + mMat.At(0, 1)*left[1]
+	result[1] = mMat.At(1, 0)*left[0] + mMat.At(1, 1)*left[1]
+
+	return result
 }
 
 type TDFiniteBarrier struct {

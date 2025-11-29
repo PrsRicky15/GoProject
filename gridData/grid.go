@@ -177,35 +177,35 @@ func (g *RadGrid) ForceOnGrid(pot PotentialOp[float64]) []float64 {
 }
 
 func (g *RadGrid) DisplayPotentialRe(Pot PotentialOp[float64], format string) {
-	displayFunc(g, Pot, format, g.PotentialAtR)
+	DisplayFunc(g, Pot, format, g.PotentialAtR)
 }
 func (g *RadGrid) DisplayPotentialC(Pot PotentialOp[complex128], format string, theta float64) {
-	displayFunc(g, Pot, format, g.PotentialAtZ, theta)
+	DisplayFunc(g, Pot, format, g.PotentialAtZ, theta)
 }
 func (g *RadGrid) DisplayForceRe(Pot PotentialOp[float64], format string) {
-	displayFunc(g, Pot, format, g.ForceAtR)
+	DisplayFunc(g, Pot, format, g.ForceAtR)
 }
 func (g *RadGrid) DisplayForceC(Pot PotentialOp[complex128], format string, theta float64) {
-	displayFunc(g, Pot, format, g.ForceAtZ, theta)
+	DisplayFunc(g, Pot, format, g.ForceAtZ, theta)
 }
 
 func (g *RadGrid) PrintPotentToFileRe(Pot PotentialOp[float64], filename string, format string) error {
-	err := functionToFile(g, Pot, filename, format, g.PotentialAtR)
+	err := FunctionToFile(g, Pot, filename, format, g.PotentialAtR)
 	return err
 }
 
 func (g *RadGrid) PrintPotentToFileZ(Pot PotentialOp[complex128], filename string, format string, theta float64) error {
-	err := functionToFile(g, Pot, filename, format, g.PotentialAtZ, theta)
+	err := FunctionToFile(g, Pot, filename, format, g.PotentialAtZ, theta)
 	return err
 }
 
 func (g *RadGrid) PrintForceToFileRe(Pot PotentialOp[float64], filename string, format string) error {
-	err := functionToFile(g, Pot, filename, format, g.ForceAtR)
+	err := FunctionToFile(g, Pot, filename, format, g.ForceAtR)
 	return err
 }
 
 func (g *RadGrid) PrintForceToFileZ(Pot PotentialOp[complex128], filename string, format string, theta float64) error {
-	err := functionToFile(g, Pot, filename, format, g.ForceAtZ, theta)
+	err := FunctionToFile(g, Pot, filename, format, g.ForceAtZ, theta)
 	return err
 }
 

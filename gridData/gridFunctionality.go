@@ -29,9 +29,9 @@ type GridFunctionality interface {
 	DisplayInfo()
 }
 
-// <p> Some Important function which defines R-Grid and T-grid properly without duplication
-// displayFunc Display function on a grid <\p>
-func displayFunc[T VarType](g getGridData, Pot PotentialOp[T], format string,
+// DisplayFunc <p> Some Important function which defines R-Grid and T-grid properly without duplication
+// DisplayFunc Display function on a grid <\p>
+func DisplayFunc[T VarType](g getGridData, Pot PotentialOp[T], format string,
 	f func(evaluate PotentialOp[T], x T) T, theta ...float64) {
 	fullFormat := "%14.7e\t" + format + "\n"
 
@@ -58,8 +58,8 @@ func displayFunc[T VarType](g getGridData, Pot PotentialOp[T], format string,
 	}
 }
 
-// functionToFile print function on a grid to a File
-func functionToFile[T VarType](g getGridData, Pot PotentialOp[T], filename string,
+// FunctionToFile print function on a grid to a File
+func FunctionToFile[T VarType](g getGridData, Pot PotentialOp[T], filename string,
 	format string, f func(evaluate PotentialOp[T], x T) T, theta ...float64) error {
 	file, err := os.Create(filename)
 	if err != nil {
