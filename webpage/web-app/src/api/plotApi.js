@@ -1,15 +1,16 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
 class PlotAPI {
-  async generatePlotData(plotType, parameters) {
+  async generatePlotData(setGrid, plotType, potParams) {
     const response = await fetch(`${API_BASE_URL}/plots/data`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+          grid: setGrid,
         plot_type: plotType,
-        parameters: parameters,
+        parameters: potParams,
       }),
     });
 

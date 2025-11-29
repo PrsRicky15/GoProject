@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import Plot from 'react-plotly.js';
-import { BarChart3, Loader, Download, RefreshCw, Maximize2 } from 'lucide-react';
+import { BarChart3, Loader, Download, RefreshCw } from 'lucide-react';
 import plotApi from '../api/plotApi';
 
 export default function PlotGenerator() {
-  const [plotType, setPlotType] = useState('Morse');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [plotData, setPlotData] = useState(null);
-  const [error, setError] = useState(null);
-  const [parameters, setParameters] = useState({
-    D: 100.0,
-    a: 1.5,
-    r0: 2.0,
-  });
+    const [gridParams, setGridParams] = useState({
+        rMin: -0.,
+        rMax: 10.,
+        nGrid: 100,
+    });
+
+    const [plotType, setPlotType] = useState('Morse');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [plotData, setPlotData] = useState(null);
+    const [error, setError] = useState(null);
+    const [potParams, setPotParams] = useState({
+        D: 100.0,
+        a: 1.5,
+        r0: 2.0,
+    });
+
 
   const plotTypes = [
     { value: 'Morse', label: 'Morse Potential' },
@@ -26,7 +33,7 @@ export default function PlotGenerator() {
     setError(null);
 
     try {
-      const response = await plotApi.generatePlotData(plotType, parameters);
+      const response = await plotApi.generatePlotData(plotType, potParams);
       setPlotData(response);
     } catch (err) {
       setError(err.message);
@@ -69,6 +76,46 @@ export default function PlotGenerator() {
               </h2>
             </div>
 
+              {/* Plot Type Selector */}
+              <div>
+                  <label className="block text-sm text-gray-400 mb-2">rMin</label>
+                  <input
+                      type="number"
+                      step="0.1"
+                      value={gridParams.rMin}
+                      onChange={(e) =>
+                          setGridParams({ ...gridParams, rMin: parseFloat(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+              </div>
+
+              <div>
+                  <label className="block text-sm text-gray-400 mb-2">rMax</label>
+                  <input
+                      type="number"
+                      step="0.1"
+                      value={gridParams.rMax}
+                      onChange={(e) =>
+                          setGridParams({ ...gridParams, rMax: parseFloat(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+              </div>
+
+              <div>
+                  <label className="block text-sm text-gray-400 mb-2">nGrid</label>
+                  <input
+                      type="number"
+                      step="0.1"
+                      value={gridParams.nGrid}
+                      onChange={(e) =>
+                          setGridParams({ ...gridParams, nGrid: parseFloat(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
+                  />
+              </div>
+
             {/* Plot Type Selector */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Plot Type</label>
@@ -95,9 +142,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="10"
-                    value={parameters.D}
+                    value={potParams.D}
                     onChange={(e) =>
-                      setParameters({ ...parameters, D: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, D: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -110,9 +157,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="0.1"
-                    value={parameters.a}
+                    value={potParams.a}
                     onChange={(e) =>
-                      setParameters({ ...parameters, a: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, a: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -125,9 +172,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="0.1"
-                    value={parameters.r0}
+                    value={potParams.r0}
                     onChange={(e) =>
-                      setParameters({ ...parameters, r0: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, r0: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -144,9 +191,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="1"
-                    value={parameters.D}
+                    value={potParams.D}
                     onChange={(e) =>
-                      setParameters({ ...parameters, D: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, D: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -159,9 +206,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="0.1"
-                    value={parameters.a}
+                    value={potParams.a}
                     onChange={(e) =>
-                      setParameters({ ...parameters, a: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, a: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -174,9 +221,9 @@ export default function PlotGenerator() {
                   <input
                     type="number"
                     step="0.1"
-                    value={parameters.r0}
+                    value={potParams.r0}
                     onChange={(e) =>
-                      setParameters({ ...parameters, r0: parseFloat(e.target.value) })
+                      setPotParams({ ...potParams, r0: parseFloat(e.target.value) })
                     }
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-purple-500 outline-none"
                   />
@@ -224,7 +271,7 @@ export default function PlotGenerator() {
           </div>
 
           {/* Plot Display Area */}
-          <div className="lg:col-span-3 bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="lg:col-span-3 bg-white/10 border border-white/10 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Visualization</h2>
               {plotData && (
