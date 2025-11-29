@@ -125,7 +125,7 @@ func (k *KeDvrBasis) GetMat() *mat.Dense {
 // scaleMatrixComplexParam scales a real matrix by exp(-2iθ) and stores in complex matrix
 func scaleMatrixComplexParam(realMat *mat.Dense, complexMat *mat.CDense, theta float64) {
 	rows, cols := realMat.Dims()
-	expFactor := cmplx.Exp(-2i * complex(theta, 0))
+	expFactor := cmplx.Exp(-complex(0, 2*theta))
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
