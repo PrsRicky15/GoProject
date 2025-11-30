@@ -13,13 +13,13 @@ import (
 type FiniteBarrier struct {
 	grid  *gridData.RadGrid
 	rFunc gridData.Rfunc
-	mass  	float64
+	mass  float64
 
-	nDelta 	uint
-	start	float64
-	end		float64
-	width  	float64
-	v0     	[]float64
+	nDelta uint
+	start  float64
+	end    float64
+	width  float64
+	v0     []float64
 }
 
 func NewFiniteBarrier(grid *gridData.RadGrid, rFunc gridData.Rfunc, mass float64) *FiniteBarrier {
@@ -52,30 +52,59 @@ func (fb *FiniteBarrier) MaxMinPotent() {
 		fx1 := fb.rFunc.EvaluateAt(x1)
 		fx2 := fb.rFunc.EvaluateAt(x2)
 		if fx1 > 1e-07 && fx2 > 1e-07 {
-			fb.start = x1
-			fb.end = x2
+			fb.start = x2
+			fb.end = x1
 		}
 	}
 }
 
+func (fb *FiniteBarrier) DisplayMinMaxBarrier() {
+	fmt.Printf("Start: %f\n", fb.start)
+	fmt.Printf("End: %f\n", fb.end)
+	fmt.Printf("Width: %f\n", fb.width)
+	fmt.Printf("N-barrier: %d\n", fb.nDelta)
+
+	fmt.Printf("Barrier v0: %17.7e\n", fb.v0)
+}
+
 func (fb *FiniteBarrier) ConvertFuncToBarrier(nDelta uint) {
+	fb.nDelta = nDelta
 	fb.v0 = make([]float64, nDelta)
+	fb.MaxMinPotent()
 	fb.width = (fb.end - fb.start) / float64(nDelta)
 
 	for i := uint32(0); i < fb.grid.NPoints(); i++ {
 		x := fb.start + float64(i)*fb.width
-		for _, vk := range fb.v0 {
-			if (x )
+		for ia := range fb.v0 {
+			if math.Abs(x-(fb.start+float64(ia)*fb.width)) < 1e-07 {
+				fb.v0[ia] = fb.rFunc.EvaluateAt(x)
+			}
 		}
-		fb.v0[i] = fb.rFunc.EvaluateAt(x)
+	}
+}
+
+func (fb *FiniteBarrier) barrierOnGrid(Pot []float64) {
+	for i := uint32(0); i < fb.grid.NPoints(); i++ {
+		x := fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
+		for ia := range fb.v0 {
+			barrierStart := fb.start + float64(ia)*fb.width
+			barrierEnd := barrierStart + fb.width
+
+			if x >= barrierStart && x < barrierEnd {
+				Pot[i] = fb.v0[ia]
+				break
+			}
+		}
 	}
 }
 
 func (fb *FiniteBarrier) DisplayFuncToDeltaToFile(format string) {
-	fullFormat := "%14.7e" + "\t" + format + "\n"
+	barPot := make([]float64, fb.grid.NPoints())
+	fb.barrierOnGrid(barPot)
+	fullFormat := "%14.7e" + "\t" + format + "\t" + format + "\n"
 	for i := uint32(0); i < fb.grid.NPoints(); i++ {
 		x := fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
-		fmt.Printf(fullFormat, x, fb.rFunc.EvaluateAt(x))
+		fmt.Printf(fullFormat, x, fb.rFunc.EvaluateAt(x), barPot[i])
 	}
 }
 
@@ -91,13 +120,16 @@ func (fb *FiniteBarrier) PrintFuncToDeltaToFile(filename string, format string) 
 		}
 	}(file)
 
-	fullFormat := "%14.7e" + "\t" + format + "\n"
+	barPot := make([]float64, fb.grid.NPoints())
+	fb.barrierOnGrid(barPot)
+
+	fullFormat := "%14.7e" + "\t" + format + "\t" + format + "\n"
 	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
 	_, err = fmt.Fprintf(file, "#\t\t grid\t\t function value\n")
 	_, err = fmt.Fprintf(file, "#--------------------------------------------------\n")
 	for i := uint32(0); i < fb.grid.NPoints(); i++ {
 		var x = fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
-		_, err := fmt.Fprintf(file, fullFormat, x, fb.rFunc.EvaluateAt(x))
+		_, err := fmt.Fprintf(file, fullFormat, x, fb.rFunc.EvaluateAt(x), barPot[i])
 		if err != nil {
 			return err
 		}

@@ -1,21 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"GoProject/BasicOneD"
+	"GoProject/Plots"
 	"log"
 	"net/http"
-
-	"GoProject/Plots"
-	"GoProject/gridData"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
-func main() {
-	grid, _ := gridData.NewRGrid(0, 25, 100)
-	fmt.Println(grid)
-
+func webserver() {
 	router := mux.NewRouter()
 
 	// API routes
@@ -32,4 +27,8 @@ func main() {
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))
+}
+
+func main() {
+	BasicOneD.GaussianBarrier()
 }

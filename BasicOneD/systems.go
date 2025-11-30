@@ -43,6 +43,14 @@ func GaussianBarrier() {
 		panic(err)
 	}
 	fmt.Println("gauss:", gauss)
+
+	gaussBar := NewFiniteBarrier(grid, gauss, 1.)
+	gaussBar.ConvertFuncToBarrier(20)
+	gaussBar.DisplayMinMaxBarrier()
+	err = gaussBar.PrintFuncToDeltaToFile("GaussBarrier.dat", "%21.14e")
+	if err != nil {
+		panic("something bad happened")
+	}
 }
 
 func SuperGaussianBarrier() {
