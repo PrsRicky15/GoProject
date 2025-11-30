@@ -5,7 +5,7 @@ import plotApi from '../api/plotApi';
 
 export default function PlotGenerator() {
     const [gridParams, setGridParams] = useState({
-        rMin: -0.,
+        rMin: -10.,
         rMax: 10.,
         nGrid: 100,
     });
@@ -33,7 +33,7 @@ export default function PlotGenerator() {
     setError(null);
 
     try {
-      const response = await plotApi.generatePlotData(plotType, potParams);
+      const response = await plotApi.generatePlotData(gridParams, plotType, potParams);
       setPlotData(response);
     } catch (err) {
       setError(err.message);
