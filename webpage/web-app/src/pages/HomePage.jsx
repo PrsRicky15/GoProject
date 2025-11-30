@@ -86,10 +86,12 @@ export default function QuantumChemistryHomepage() {
           </span>
         </div>
         <div className="hidden md:flex space-x-8 text-sm">
-          <a href="#features" className="hover:text-purple-400 transition">Features</a>
-          <a href="#solutions" className="hover:text-purple-400 transition">Solutions</a>
-          <a href="#pricing" className="hover:text-purple-400 transition">Blog</a>
-          <a href="#docs" className="hover:text-purple-400 transition">Join Us</a>
+          <div className="hidden md:flex space-x-8 text-sm">
+            <a href="/" className="hover:text-purple-400 transition">Home</a>
+            <a href="/plots" className="hover:text-purple-400 transition">Plot Generator</a>
+            <a href="#features" className="hover:text-purple-400 transition">Features</a>
+            <a href="#docs" className="hover:text-purple-400 transition">Docs</a>
+          </div>
         </div>
         <div className="flex space-x-4">
           <button className="px-4 py-2 text-sm hover:text-purple-400 transition">
@@ -182,9 +184,6 @@ export default function QuantumChemistryHomepage() {
 
       {/* Use Cases */}
       <SolutionsSection />
-        <div><a href="basic.html"></a>
-            <button>Quantum Mechanics →</button>
-        </div>
 
       {/* Footer */}
       <footer className="relative z-10 px-6 py-12 border-t border-white/10">
