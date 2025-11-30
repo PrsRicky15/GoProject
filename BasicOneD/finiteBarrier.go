@@ -13,11 +13,13 @@ import (
 type FiniteBarrier struct {
 	grid  *gridData.RadGrid
 	rFunc gridData.Rfunc
-	mass  float64
+	mass  	float64
 
-	nDelta uint
-	width  float64
-	v0     []float64
+	nDelta 	uint
+	start	float64
+	end		float64
+	width  	float64
+	v0     	[]float64
 }
 
 func NewFiniteBarrier(grid *gridData.RadGrid, rFunc gridData.Rfunc, mass float64) *FiniteBarrier {
@@ -43,33 +45,30 @@ func (fb *FiniteBarrier) ReDefineFunc(rFunc gridData.Rfunc, nDelta uint) {
 	fb.nDelta = nDelta
 }
 
-func (fb *FiniteBarrier) MaxMinPotent() (float64, float64) {
-	var xmin float64
-	var xmax float64
+func (fb *FiniteBarrier) MaxMinPotent() {
 	for i := uint32(0); i < fb.grid.NPoints(); i++ {
 		x1 := fb.grid.RMin() + float64(i)*fb.grid.DeltaR()
 		x2 := fb.grid.RMax() - float64(i)*fb.grid.DeltaR()
 		fx1 := fb.rFunc.EvaluateAt(x1)
 		fx2 := fb.rFunc.EvaluateAt(x2)
 		if fx1 > 1e-07 && fx2 > 1e-07 {
-			xmin = x1
-			xmax = x2
+			fb.start = x1
+			fb.end = x2
 		}
 	}
-	return xmin, xmax
 }
 
-func (fb *FiniteBarrier) ConvertFuncToBarrier(nDelta uint) float64 {
+func (fb *FiniteBarrier) ConvertFuncToBarrier(nDelta uint) {
 	fb.v0 = make([]float64, nDelta)
-	xmin, xmax := fb.MaxMinPotent()
-
-	fb.width = (xmax - xmin) / float64(nDelta)
+	fb.width = (fb.end - fb.start) / float64(nDelta)
 
 	for i := uint32(0); i < fb.grid.NPoints(); i++ {
-		x := xmin + float64(i)*fb.width
+		x := fb.start + float64(i)*fb.width
+		for _, vk := range fb.v0 {
+			if (x )
+		}
 		fb.v0[i] = fb.rFunc.EvaluateAt(x)
 	}
-	return xmin
 }
 
 func (fb *FiniteBarrier) DisplayFuncToDeltaToFile(format string) {
