@@ -71,17 +71,18 @@ func GaussianBarrier() error {
 	return nil
 }
 
-func SuperGaussianBarrier() {
+func SuperGaussianBarrier() error {
 	grid, err := gridData.NewRGrid(-20, 20, 200)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	gauss := gridData.SuperGaussian[float64]{Strength: 1., Sigma: 2, Order: 6}
 	err = grid.PrintPotentToFileRe(gauss, "SuperGaussBarrier.dat", "%21.14e")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("gauss:", gauss)
+	return nil
 }
 
 func CompositeFunction() {
