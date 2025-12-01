@@ -6,7 +6,7 @@ import (
 )
 
 func OneDimPoissonSolver() error {
-	grid, err := gridData.NewRGrid(-5., 5, 40)
+	grid, err := gridData.NewRGrid(-5., 5, 200)
 	if err != nil {
 		return err
 	}

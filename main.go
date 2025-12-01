@@ -30,6 +30,7 @@ func webserver() {
 }
 
 func main() {
+	webserver()
 	err := BasicOneD.OneDimPoissonSolver()
 	if err != nil {
 		log.Fatal(err)

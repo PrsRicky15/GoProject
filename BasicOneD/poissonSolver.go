@@ -133,13 +133,13 @@ func (PS1D *PoissonSolver1D) IteratingStepWithOmega(omega float64) ([]float64, i
 
 func (PS1D *PoissonSolver1D) CheckError() error {
 
-	err := PS1D.Initialize(1000, 5.0e-3, 0., 0.)
+	err := PS1D.Initialize(5000, 5.0e-3, 0., 0.)
 	if err != nil {
 		return err
 	}
 	phi, iter, err := PS1D.IteratingStepMethod()
 
-	err = PS1D.Initialize(1000, 5.0e-3, 0., 0.)
+	err = PS1D.Initialize(5000, 5.0e-3, 0., 0.)
 	if err != nil {
 		return err
 	}

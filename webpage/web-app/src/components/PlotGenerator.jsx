@@ -33,7 +33,7 @@ export default function PlotGenerator() {
     setError(null);
 
     try {
-      const response = await plotApi.generatePlotData(plotType, potParams);
+      const response = await plotApi.generatePlotData(gridParams, plotType, potParams);
       setPlotData(response);
     } catch (err) {
       setError(err.message);
