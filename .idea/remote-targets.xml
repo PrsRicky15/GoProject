@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="RemoteTargetsManager">
+    <option name="projectDefaultTargetUuid" value="8c9e6839-fa74-417a-ad81-86223ed53f0d" />
     <targets>
       <target name="WSL - Ubuntu" type="wsl" uuid="8c9e6839-fa74-417a-ad81-86223ed53f0d">
         <config>
@@ -23,6 +24,9 @@
               </VolumeState>
             </option>
           </config>
+        </ContributedStateBase>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config />
         </ContributedStateBase>
       </target>
     </targets>
