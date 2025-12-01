@@ -2,6 +2,7 @@ package Plots
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"slices"
 
@@ -22,18 +23,11 @@ type PlotDataResponse struct {
 
 // Generate 1D potential energy surface data
 func generateMorsePotentialSurfaceData(gridParams map[string]interface{}, params map[string]interface{}) PlotDataResponse {
-	// Generate data points
-	// numPoints := 200
-	// x := make([]float64, numPoints)
-	// y := make([]float64, numPoints)
-
-	// Default grid for plots
 	grid, _ := gridData.NewRGrid(gridParams["rMin"].(float64), gridParams["rMax"].(float64), gridParams["nGrid"].(uint32))
-
-	// Get parameters with defaults
-	D := 100.0 // Dissociation energy
-	a := 1.5   // Width parameter
-	r0 := 2.0  // Equilibrium distance
+	// Default parameters
+	D := 100.0
+	a := 1.5
+	r0 := 2.0
 
 	if val, ok := params["D"].(float64); ok {
 		D = val
@@ -49,12 +43,6 @@ func generateMorsePotentialSurfaceData(gridParams map[string]interface{}, params
 
 	x := grid.RValues()
 	y := grid.PotentialOnGrid(morse)
-
-	// for i := 0; i < numPoints; i++ {
-	//    x[i] = float64(i) * 0.05
-	//    // Morse potential: D * (1 - exp(-a*(x-r0)))^2
-	//    y[i] = D * math.Pow(1-math.Exp(-a*(x[i]-r0)), 2)
-	// }
 
 	trace := map[string]interface{}{
 		"x":    x,
@@ -109,13 +97,11 @@ func generateMorsePotentialSurfaceData(gridParams map[string]interface{}, params
 
 // Generate 1D potential energy surface data
 func generateSoftcorePotentialSurfaceData(gridParams map[string]interface{}, params map[string]interface{}) PlotDataResponse {
-	// Default grid for plots
 	grid, _ := gridData.NewRGrid(gridParams["rMin"].(float64), gridParams["rMax"].(float64), gridParams["nGrid"].(uint32))
-
-	// Get parameters with defaults
-	charge := 1.0 // Dissociation energy
-	a := 1.5      // Width parameter
-	r0 := 2.0     // Equilibrium distance
+	// Default parameters
+	charge := 1.0
+	a := 1.5
+	r0 := 2.0
 
 	if val, ok := params["Charge"].(float64); ok {
 		charge = val
@@ -186,13 +172,12 @@ func generateSoftcorePotentialSurfaceData(gridParams map[string]interface{}, par
 	}
 }
 
-// Main handler
+// GeneratePlotData Main handler
 func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
 	var req PlotRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
 	}
 
 	var response PlotDataResponse
@@ -204,9 +189,11 @@ func GeneratePlotData(w http.ResponseWriter, r *http.Request) {
 		response = generateSoftcorePotentialSurfaceData(req.Grid, req.Parameters)
 	default:
 		http.Error(w, "Unknown plot type", http.StatusBadRequest)
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Println(err)
+	}
 }

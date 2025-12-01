@@ -27,7 +27,15 @@ func OneDimPoissonSolver() error {
 	return nil
 }
 
-func BarrierPotential(v0x, aPoint []float64) error {
+func BarrierPotential() error {
+
+	v0x := []float64{0, 10, 1, 8, 0}
+	aPoint := []float64{-10, -6, 6.3, 10, 15}
+
+	/*	v0x := []float64{0, 1, -0.5}
+		aPoint := []float64{0, 5, 8}
+	*/
+
 	grid, err := gridData.NewRGrid(aPoint[0]-5, aPoint[len(aPoint)-1], 100)
 	fmt.Println(grid, err)
 	if err != nil {
