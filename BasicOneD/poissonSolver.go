@@ -94,23 +94,21 @@ func (PS1D *PoissonSolver1D) Initialize(maxIter int, tolerance, phiA, phiB float
 }
 
 func (PS1D *PoissonSolver1D) IteratingStepMethod() ([]float64, int, error) {
+
 	for iter := 0; iter < PS1D.maxIter; iter++ {
 
 		for i := 1; i < PS1D.nMin1; i++ {
-			PS1D.phiNew[i] = 0.5 * (PS1D.phiPre[i+1] + PS1D.phiPre[i-1] + PS1D.rho[i]/PS1D.dx2)
+			PS1D.phiNew[i] = 0.5 * (PS1D.phiPre[i+1] + PS1D.phiPre[i-1] - PS1D.rho[i]*PS1D.dx2)
 		}
 
-		maxDiff := 0.0
+		errL2Norm := 0.0
 		for i := 1; i < PS1D.nMin1; i++ {
-			diff := math.Abs(PS1D.phiNew[i] - PS1D.phiPre[i])
-			if diff > maxDiff {
-				maxDiff = diff
-			}
+			errL2Norm += (PS1D.phiNew[i] - PS1D.phiPre[i]) * (PS1D.phiNew[i] - PS1D.phiPre[i])
 		}
 
 		copy(PS1D.phiPre, PS1D.phiNew)
 
-		if maxDiff < PS1D.tol {
+		if math.Sqrt(errL2Norm) < PS1D.tol {
 			return PS1D.phiNew, iter + 1, nil
 		}
 	}
@@ -121,23 +119,52 @@ func (PS1D *PoissonSolver1D) IteratingStepMethod() ([]float64, int, error) {
 func (PS1D *PoissonSolver1D) IteratingStepWithOmega(omega float64) ([]float64, int, error) {
 	for iter := 0; iter < PS1D.maxIter; iter++ {
 		for i := 1; i < PS1D.nMin1; i++ {
-			PS1D.phiNew[i] = 0.5 * (PS1D.phiPre[i+1] + PS1D.phiPre[i-1] + PS1D.rho[i]/PS1D.dx2)
+			PS1D.phiNew[i] = 1 / (2 + omega) * (PS1D.phiPre[i+1] - omega*PS1D.phiPre[i] +
+				PS1D.phiPre[i-1] - PS1D.rho[i]/PS1D.dx2)
 		}
 
-		maxDiff := 0.0
+		errL2Norm := 0.0
 		for i := 1; i < PS1D.nMin1; i++ {
-			diff := math.Abs(PS1D.phiNew[i] - PS1D.phiPre[i])
-			if diff > maxDiff {
-				maxDiff = diff
-			}
+			errL2Norm += (PS1D.phiNew[i] - PS1D.phiPre[i]) * (PS1D.phiNew[i] - PS1D.phiPre[i])
 		}
 
 		copy(PS1D.phiPre, PS1D.phiNew)
 
-		if maxDiff < PS1D.tol {
+		if math.Sqrt(errL2Norm) < PS1D.tol {
 			return PS1D.phiNew, iter + 1, nil
 		}
 	}
 
 	return nil, PS1D.maxIter, fmt.Errorf("did not converge in %d iterations", PS1D.maxIter)
+}
+
+func (PS1D *PoissonSolver1D) CheckError() error {
+
+	err := PS1D.Initialize(1000, 5.0e-3, 0., 0.)
+	if err != nil {
+		return err
+	}
+	phi, iter, err := PS1D.IteratingStepMethod()
+
+	err = PS1D.Initialize(1000, 5.0e-3, 0., 0.)
+	if err != nil {
+		return err
+	}
+
+	phiOmg, iterOmg, errOmg := PS1D.IteratingStepWithOmega(1)
+
+	fmt.Printf("Error Without Omega:\t %v %v\n", iter, err)
+	fmt.Printf("Error With Omega:\t %v %v\n", iterOmg, errOmg)
+
+	err = PS1D.grid.PrintVectorToFileRe(phi, "phiWO_omega.dat", "%21.14e")
+	if err != nil {
+		return err
+	}
+
+	err = PS1D.grid.PrintVectorToFileRe(phiOmg, "phi_with_omega.dat", "%21.14e")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

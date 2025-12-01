@@ -10,18 +10,20 @@ func OneDimPoissonSolver() error {
 	if err != nil {
 		return err
 	}
-
-	gaus := gridData.Gaussian[float64]{Sigma: 4., Strength: 1}
+	gaus := gridData.Gaussian[float64]{Sigma: 0.5, Strength: 1}
 	err = grid.PrintPotentToFileRe(gaus, "GaussFunc.dat", "%21.14e")
 	if err != nil {
 		return err
 	}
-
 	Solver1D, err := NewOneDimPoissonSolver(grid, gaus)
 	if err != nil {
 		return err
 	}
 	Solver1D.Print()
+	err = Solver1D.CheckError()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
