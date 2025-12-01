@@ -12,12 +12,12 @@ import (
 
 // NDimGrid represents an n-dimensional grid
 type NDimGrid struct {
-	nDim     uint32    // Number of dimensions
-	mins     []float64 // Minimum values for each dimension
-	maxs     []float64 // Maximum values for each dimension
-	nPoints  []uint32  // Number of points in each dimension
-	gridData []setGrid // Grid data for each dimension
-	cutoffE  []float64 // Cutoff energy for each dimension
+	nDim     uint32
+	mins     []float64
+	maxs     []float64
+	nPoints  []uint32
+	gridData []setGrid
+	cutoffE  []float64
 }
 
 func (g *NDimGrid) String() string {
