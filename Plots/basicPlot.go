@@ -30,10 +30,10 @@ func generateMorsePotentialSurfaceData(gridParams map[string]interface{}, params
 	if val, ok := gridParams["rMin"].(float64); ok {
 		rMin = val
 	}
-	if val, ok := gridParams["a"].(float64); ok {
+	if val, ok := gridParams["rMax"].(float64); ok {
 		rMax = val
 	}
-	if val, ok := gridParams["r0"].(float64); ok {
+	if val, ok := gridParams["nGrid"].(float64); ok {
 		nGrid = uint32(val)
 	}
 
@@ -120,10 +120,10 @@ func generateSoftcorePotentialSurfaceData(gridParams map[string]interface{}, par
 	if val, ok := gridParams["rMin"].(float64); ok {
 		rMin = val
 	}
-	if val, ok := gridParams["a"].(float64); ok {
+	if val, ok := gridParams["rMax"].(float64); ok {
 		rMax = val
 	}
-	if val, ok := gridParams["r0"].(float64); ok {
+	if val, ok := gridParams["nGrid"].(float64); ok {
 		nGrid = uint32(val)
 	}
 

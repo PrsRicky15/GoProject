@@ -45,7 +45,7 @@ func (eEx *EulerExplicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (eEx *EulerExplicit) NextStep(xt, t float64) (float64, error) {
-	fxt := eEx.timeFunc.EvaluateAt(xt, t)
+	fxt := eEx.timeFunc.EvaluateAtTime(xt, t)
 	if math.IsNaN(fxt) || math.IsInf(fxt, 0) {
 		return xt, fmt.Errorf("the fxt is not valid")
 	}
@@ -65,7 +65,7 @@ func (eEx *EulerExplicit) NextStepOnGrid(xt []float64, t float64) error {
 		eEx.fxt.Inc = 1
 	}
 
-	eEx.timeFunc.EvaluateOnRGridInPlace(xt, eEx.fxt.Data, t)
+	eEx.timeFunc.EvaluateOnRGridTimeInPlace(xt, eEx.fxt.Data, t)
 
 	for _, v := range eEx.fxt.Data {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
@@ -107,9 +107,9 @@ func (hEx *HeunsExplicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (hEx *HeunsExplicit) NextStep(xt, t float64) (float64, error) {
-	fxt := hEx.timeFunc.EvaluateAt(xt, t)
+	fxt := hEx.timeFunc.EvaluateAtTime(xt, t)
 	predictor := xt + fxt*hEx.deltaTime
-	slope2 := fxt + hEx.timeFunc.EvaluateAt(predictor, t+hEx.deltaTime)
+	slope2 := fxt + hEx.timeFunc.EvaluateAtTime(predictor, t+hEx.deltaTime)
 
 	if math.IsNaN(slope2) || math.IsInf(slope2, 0) {
 		return xt, fmt.Errorf("invalid slope value")
@@ -137,9 +137,9 @@ func (hEx *HeunsExplicit) NextStepOnGrid(xt []float64, t float64) error {
 	nPoints := len(xt)
 	hEx.allocate(nPoints)
 
-	hEx.timeFunc.EvaluateOnRGridInPlace(xt, hEx.fxt.Data, t)
+	hEx.timeFunc.EvaluateOnRGridTimeInPlace(xt, hEx.fxt.Data, t)
 	hEx.PredictIni(xt, hEx.fxt, hEx.predictor)
-	hEx.timeFunc.EvaluateOnRGridInPlace(hEx.predictor.Data, hEx.corrector.Data, t+hEx.deltaTime)
+	hEx.timeFunc.EvaluateOnRGridTimeInPlace(hEx.predictor.Data, hEx.corrector.Data, t+hEx.deltaTime)
 
 	for i := 0; i < nPoints; i++ {
 		hEx.corrector.Data[i] += hEx.fxt.Data[i]
@@ -184,8 +184,8 @@ func (mEx *MidPointExplicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp)
 }
 
 func (mEx *MidPointExplicit) NextStep(xt, t float64) (float64, error) {
-	xtMid := xt + mEx.timeFunc.EvaluateAt(xt, t)*mEx.halfDt
-	slope := mEx.timeFunc.EvaluateAt(xtMid, t+mEx.halfDt)
+	xtMid := xt + mEx.timeFunc.EvaluateAtTime(xt, t)*mEx.halfDt
+	slope := mEx.timeFunc.EvaluateAtTime(xtMid, t+mEx.halfDt)
 
 	if math.IsNaN(slope) || math.IsInf(slope, 0) {
 		return xt, fmt.Errorf("the fxt is not valid")
@@ -203,12 +203,12 @@ func (mEx *MidPointExplicit) NextStepOnGrid(xt []float64, t float64) error {
 	}
 
 	// Compute xtMid = xt + halfDt * f(xt, t)
-	mEx.timeFunc.EvaluateOnRGridInPlace(xt, mEx.fxt.Data, t)
+	mEx.timeFunc.EvaluateOnRGridTimeInPlace(xt, mEx.fxt.Data, t)
 	copy(mEx.xtMid.Data, xt)
 	blas64.Axpy(mEx.halfDt, mEx.fxt, mEx.xtMid)
 
 	// Compute f(xtMid, t + halfDt)
-	mEx.timeFunc.EvaluateOnRGridInPlace(mEx.xtMid.Data, mEx.fxt.Data, t+mEx.halfDt)
+	mEx.timeFunc.EvaluateOnRGridTimeInPlace(mEx.xtMid.Data, mEx.fxt.Data, t+mEx.halfDt)
 
 	for i := 0; i < nPoints; i++ {
 		if math.IsNaN(mEx.fxt.Data[i]) || math.IsInf(mEx.fxt.Data[i], 0) {
@@ -256,8 +256,8 @@ func (rEx2 *Ralston2order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (rEx2 *Ralston2order) NextStep(xt, t float64) (float64, error) {
-	k1 := rEx2.timeFunc.EvaluateAt(xt, t)
-	k2 := rEx2.timeFunc.EvaluateAt(xt+rEx2.dt2by3*k1, t+rEx2.dt2by3)
+	k1 := rEx2.timeFunc.EvaluateAtTime(xt, t)
+	k2 := rEx2.timeFunc.EvaluateAtTime(xt+rEx2.dt2by3*k1, t+rEx2.dt2by3)
 	return xt + k1*rEx2.dt1by4 + k2*rEx2.dt3by4, nil
 }
 
@@ -297,9 +297,9 @@ func (rEx *Ralston3Order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (rEx *Ralston3Order) NextStep(xt, t float64) (float64, error) {
-	k1 := rEx.timeFunc.EvaluateAt(xt, t)
-	k2 := rEx.timeFunc.EvaluateAt(xt+rEx.halfDt*k1, t+rEx.halfDt)
-	k3 := rEx.timeFunc.EvaluateAt(xt+rEx.threeBy4Dt*k1, t+rEx.threeBy4Dt)
+	k1 := rEx.timeFunc.EvaluateAtTime(xt, t)
+	k2 := rEx.timeFunc.EvaluateAtTime(xt+rEx.halfDt*k1, t+rEx.halfDt)
+	k3 := rEx.timeFunc.EvaluateAtTime(xt+rEx.threeBy4Dt*k1, t+rEx.threeBy4Dt)
 	return xt + rEx.dtBy9*(2*k1+3*k2+4*k3), nil
 }
 
@@ -313,12 +313,12 @@ func (rEx *Ralston3Order) NextStepOnGrid(xt []float64, t float64) error {
 	}
 
 	// Compute xtMid = xt + halfDt * f(xt, t)
-	rEx.timeFunc.EvaluateOnRGridInPlace(xt, rEx.fxt.Data, t)
+	rEx.timeFunc.EvaluateOnRGridTimeInPlace(xt, rEx.fxt.Data, t)
 	copy(rEx.xtMid.Data, xt)
 	blas64.Axpy(rEx.halfDt, rEx.fxt, rEx.xtMid)
 
 	// Compute f(xtMid, t + halfDt)
-	rEx.timeFunc.EvaluateOnRGridInPlace(rEx.xtMid.Data, rEx.fxt.Data, t+rEx.halfDt)
+	rEx.timeFunc.EvaluateOnRGridTimeInPlace(rEx.xtMid.Data, rEx.fxt.Data, t+rEx.halfDt)
 
 	for i := 0; i < nPoints; i++ {
 		if math.IsNaN(rEx.fxt.Data[i]) || math.IsInf(rEx.fxt.Data[i], 0) {
@@ -368,9 +368,9 @@ func (h3Ex *Huens3Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) 
 }
 
 func (h3Ex *Huens3Explicit) NextStep(xt, t float64) (float64, error) {
-	k1 := h3Ex.timeFunc.EvaluateAt(xt, t)
-	k2 := h3Ex.timeFunc.EvaluateAt(xt+h3Ex.dtBy3*k1, t+h3Ex.dtBy3)
-	k3 := h3Ex.timeFunc.EvaluateAt(xt+h3Ex.dt2by3*k2, t+h3Ex.dt2by3)
+	k1 := h3Ex.timeFunc.EvaluateAtTime(xt, t)
+	k2 := h3Ex.timeFunc.EvaluateAtTime(xt+h3Ex.dtBy3*k1, t+h3Ex.dtBy3)
+	k3 := h3Ex.timeFunc.EvaluateAtTime(xt+h3Ex.dt2by3*k2, t+h3Ex.dt2by3)
 	return xt + h3Ex.dtBy4*(k1+3.*k3), nil
 }
 
@@ -409,10 +409,10 @@ func (vdh3Ex *VDHouwenExplicit) ReDefine(dt float64, tdFunc gridData.TDPotential
 }
 
 func (vdh3Ex *VDHouwenExplicit) NextStep(xt, t float64) (float64, error) {
-	k1 := vdh3Ex.timeFunc.EvaluateAt(xt, t)
-	k2 := vdh3Ex.timeFunc.EvaluateAt(xt+vdh3Ex.dt8by15*k1, t+vdh3Ex.dt8by15)
+	k1 := vdh3Ex.timeFunc.EvaluateAtTime(xt, t)
+	k2 := vdh3Ex.timeFunc.EvaluateAtTime(xt+vdh3Ex.dt8by15*k1, t+vdh3Ex.dt8by15)
 	val := vdh3Ex.dtBy4*k1 + vdh3Ex.dt5by12*k2
-	k3 := vdh3Ex.timeFunc.EvaluateAt(xt+val, t+vdh3Ex.dt2by3)
+	k3 := vdh3Ex.timeFunc.EvaluateAtTime(xt+val, t+vdh3Ex.dt2by3)
 	return xt + vdh3Ex.dtBy4*(k1+3.*k3), nil
 }
 
@@ -451,10 +451,10 @@ func (ssprk3 *SSPRungeKutta3) ReDefine(dt float64, tdFunc gridData.TDPotentialOp
 }
 
 func (ssprk3 *SSPRungeKutta3) NextStep(xt, t float64) (float64, error) {
-	k1 := ssprk3.timeFunc.EvaluateAt(xt, t)
-	k2 := ssprk3.timeFunc.EvaluateAt(xt+ssprk3.delTime*k1, t+ssprk3.delTime)
+	k1 := ssprk3.timeFunc.EvaluateAtTime(xt, t)
+	k2 := ssprk3.timeFunc.EvaluateAtTime(xt+ssprk3.delTime*k1, t+ssprk3.delTime)
 	val := (k1 + k2) * ssprk3.dtBy4
-	k3 := ssprk3.timeFunc.EvaluateAt(xt+val, t+ssprk3.halfDt)
+	k3 := ssprk3.timeFunc.EvaluateAtTime(xt+val, t+ssprk3.halfDt)
 	return xt + ssprk3.dtBy6*(k1+k2) + k3*ssprk3.dt2by3, nil
 }
 
@@ -490,10 +490,10 @@ func (rg3Ex *RungeKutta3Explicit) ReDefine(dt float64, tdFunc gridData.TDPotenti
 }
 
 func (rg3Ex *RungeKutta3Explicit) NextStep(xt, t float64) (float64, error) {
-	k1 := rg3Ex.timeFunc.EvaluateAt(xt, t)
-	k2 := rg3Ex.timeFunc.EvaluateAt(xt+rg3Ex.halfDt*k1, t+rg3Ex.halfDt)
+	k1 := rg3Ex.timeFunc.EvaluateAtTime(xt, t)
+	k2 := rg3Ex.timeFunc.EvaluateAtTime(xt+rg3Ex.halfDt*k1, t+rg3Ex.halfDt)
 	val := (-k1 + 2*k2) * rg3Ex.delTime
-	k3 := rg3Ex.timeFunc.EvaluateAt(xt+val, t+rg3Ex.delTime)
+	k3 := rg3Ex.timeFunc.EvaluateAtTime(xt+val, t+rg3Ex.delTime)
 	return xt + rg3Ex.dtby6*(k1+4.*k2+k3), nil
 }
 
@@ -533,10 +533,10 @@ func (rgEx *RungeKutta4Explicit) ReDefine(dt float64, tdFunc gridData.TDPotentia
 }
 
 func (rgEx *RungeKutta4Explicit) NextStep(xt, t float64) (float64, error) {
-	k1 := rgEx.timeFunc.EvaluateAt(xt, t)
-	k2 := rgEx.timeFunc.EvaluateAt(xt+k1*rgEx.halfDt, t+rgEx.halfDt)
-	k3 := rgEx.timeFunc.EvaluateAt(xt+k2*rgEx.halfDt, t+rgEx.halfDt)
-	k4 := rgEx.timeFunc.EvaluateAt(xt+k3*rgEx.deltaTime, t+rgEx.deltaTime)
+	k1 := rgEx.timeFunc.EvaluateAtTime(xt, t)
+	k2 := rgEx.timeFunc.EvaluateAtTime(xt+k1*rgEx.halfDt, t+rgEx.halfDt)
+	k3 := rgEx.timeFunc.EvaluateAtTime(xt+k2*rgEx.halfDt, t+rgEx.halfDt)
+	k4 := rgEx.timeFunc.EvaluateAtTime(xt+k3*rgEx.deltaTime, t+rgEx.deltaTime)
 
 	slope := (k1 + 2*(k2+k3) + k4) / 6.0
 
@@ -569,22 +569,22 @@ func (rgEx *RungeKutta4Explicit) NextStepOnGrid(xt []float64, t float64) error {
 	rgEx.allocate(nPoints)
 
 	// k1 = f(x, t)
-	rgEx.timeFunc.EvaluateOnRGridInPlace(xt, rgEx.k1.Data, t)
+	rgEx.timeFunc.EvaluateOnRGridTimeInPlace(xt, rgEx.k1.Data, t)
 
 	// k2 = f(x + dt/2 * k1, t + dt/2)
 	copy(rgEx.xPlusDt.Data, xt)
 	blas64.Axpy(rgEx.halfDt, rgEx.k1, rgEx.xPlusDt)
-	rgEx.timeFunc.EvaluateOnRGridInPlace(rgEx.xPlusDt.Data, rgEx.k2.Data, t+rgEx.halfDt)
+	rgEx.timeFunc.EvaluateOnRGridTimeInPlace(rgEx.xPlusDt.Data, rgEx.k2.Data, t+rgEx.halfDt)
 
 	// k3 = f(x + dt/2 * k2, t + dt/2)
 	copy(rgEx.xPlusDt.Data, xt)
 	blas64.Axpy(rgEx.halfDt, rgEx.k2, rgEx.xPlusDt)
-	rgEx.timeFunc.EvaluateOnRGridInPlace(rgEx.xPlusDt.Data, rgEx.k3.Data, t+rgEx.halfDt)
+	rgEx.timeFunc.EvaluateOnRGridTimeInPlace(rgEx.xPlusDt.Data, rgEx.k3.Data, t+rgEx.halfDt)
 
 	// k4 = f(x + dt * k3, t + dt)
 	copy(rgEx.xPlusDt.Data, xt)
 	blas64.Axpy(rgEx.deltaTime, rgEx.k3, rgEx.xPlusDt)
-	rgEx.timeFunc.EvaluateOnRGridInPlace(rgEx.xPlusDt.Data, rgEx.k4.Data, t+rgEx.deltaTime)
+	rgEx.timeFunc.EvaluateOnRGridTimeInPlace(rgEx.xPlusDt.Data, rgEx.k4.Data, t+rgEx.deltaTime)
 
 	// x_new = x + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
 	for i := 0; i < nPoints; i++ {
@@ -634,12 +634,12 @@ func (rg38 *RungeKutta38) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (rg38 *RungeKutta38) NextStep(xt, t float64) (float64, error) {
-	k1 := rg38.timeFunc.EvaluateAt(xt, t)
-	k2 := rg38.timeFunc.EvaluateAt(xt+k1*rg38.dtBy3, t+rg38.dtBy3)
+	k1 := rg38.timeFunc.EvaluateAtTime(xt, t)
+	k2 := rg38.timeFunc.EvaluateAtTime(xt+k1*rg38.dtBy3, t+rg38.dtBy3)
 	val := k2*rg38.deltaTime - k1*rg38.dtBy3
-	k3 := rg38.timeFunc.EvaluateAt(xt+val, t+rg38.dt2By3)
+	k3 := rg38.timeFunc.EvaluateAtTime(xt+val, t+rg38.dt2By3)
 	val = rg38.deltaTime * (k1 - k2 + k3)
-	k4 := rg38.timeFunc.EvaluateAt(xt+val, t+rg38.deltaTime)
+	k4 := rg38.timeFunc.EvaluateAtTime(xt+val, t+rg38.deltaTime)
 	slope := k1 + 3*(k2+k3) + k4
 
 	if math.IsNaN(slope) || math.IsInf(slope, 0) {
@@ -711,14 +711,14 @@ func (ral4 *Ralston4Order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 }
 
 func (ral4 *Ralston4Order) NextStep(xt, t float64) (float64, error) {
-	k1 := ral4.timeFunc.EvaluateAt(xt, t)
-	k2 := ral4.timeFunc.EvaluateAt(xt+k1*ral4.ksCoefs[0], t+ral4.dtCoefs[0])
+	k1 := ral4.timeFunc.EvaluateAtTime(xt, t)
+	k2 := ral4.timeFunc.EvaluateAtTime(xt+k1*ral4.ksCoefs[0], t+ral4.dtCoefs[0])
 
 	val := k1*ral4.ksCoefs[1] + k2*ral4.ksCoefs[2]
-	k3 := ral4.timeFunc.EvaluateAt(xt+val, t+ral4.dtCoefs[1])
+	k3 := ral4.timeFunc.EvaluateAtTime(xt+val, t+ral4.dtCoefs[1])
 
 	val = k1*ral4.ksCoefs[3] + k2*ral4.ksCoefs[4] + k3*ral4.ksCoefs[5]
-	k4 := ral4.timeFunc.EvaluateAt(xt+val, t+ral4.dtCoefs[2])
+	k4 := ral4.timeFunc.EvaluateAtTime(xt+val, t+ral4.dtCoefs[2])
 
 	integrant := k1*ral4.fnlCoefs[0] + k2*ral4.fnlCoefs[1] + k3*ral4.fnlCoefs[2] + k4*ral4.fnlCoefs[3]
 
@@ -799,20 +799,20 @@ func (nRK5ex *Nystrom5Explicit) ReDefine(dt float64, tdFunc gridData.TDPotential
 }
 
 func (nRK5ex *Nystrom5Explicit) NextStep(xt, t float64) (float64, error) {
-	k1 := nRK5ex.timeFunc.EvaluateAt(xt, t)
-	k2 := nRK5ex.timeFunc.EvaluateAt(xt+k1*nRK5ex.ksCoefs[0], t+nRK5ex.dtCoefs[0])
+	k1 := nRK5ex.timeFunc.EvaluateAtTime(xt, t)
+	k2 := nRK5ex.timeFunc.EvaluateAtTime(xt+k1*nRK5ex.ksCoefs[0], t+nRK5ex.dtCoefs[0])
 
 	val := k1*nRK5ex.ksCoefs[1] + k2*nRK5ex.ksCoefs[2]
-	k3 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[1])
+	k3 := nRK5ex.timeFunc.EvaluateAtTime(xt+val, t+nRK5ex.dtCoefs[1])
 
 	val = k1*nRK5ex.ksCoefs[3] + k2*nRK5ex.ksCoefs[4] + k3*nRK5ex.ksCoefs[5]
-	k4 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[2])
+	k4 := nRK5ex.timeFunc.EvaluateAtTime(xt+val, t+nRK5ex.dtCoefs[2])
 
 	val = k1*nRK5ex.ksCoefs[6] + k2*nRK5ex.ksCoefs[7] + k3*nRK5ex.ksCoefs[8] + k4*nRK5ex.ksCoefs[8]
-	k5 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[3])
+	k5 := nRK5ex.timeFunc.EvaluateAtTime(xt+val, t+nRK5ex.dtCoefs[3])
 
 	val = k1*nRK5ex.ksCoefs[9] + k2*nRK5ex.ksCoefs[10] + k3*nRK5ex.ksCoefs[11] + k4*nRK5ex.ksCoefs[12]
-	k6 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[5])
+	k6 := nRK5ex.timeFunc.EvaluateAtTime(xt+val, t+nRK5ex.dtCoefs[5])
 
 	integrant := k1*nRK5ex.fnlCoefs[0] + k3*nRK5ex.fnlCoefs[1] + k5*nRK5ex.fnlCoefs[2] + k6*nRK5ex.fnlCoefs[1]
 

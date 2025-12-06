@@ -35,8 +35,8 @@ func (HE *HuensEuler) adaptiveDt(dt float64) {
 }
 
 func (HE *HuensEuler) NextStep(xt, t float64) (float64, error) {
-	k1 := HE.timeFunc.EvaluateAt(xt, t)
-	k2 := HE.timeFunc.EvaluateAt(xt+k1*HE.deltaTime, t+HE.deltaTime)
+	k1 := HE.timeFunc.EvaluateAtTime(xt, t)
+	k2 := HE.timeFunc.EvaluateAtTime(xt+k1*HE.deltaTime, t+HE.deltaTime)
 
 	xtPlusdt1 := xt + HE.halfDt*(k1+k2)
 	xtPlusdt2 := xt + k1*HE.deltaTime
@@ -88,11 +88,11 @@ func (FRK12 *FehlbergRK12) adaptiveDt(dt float64) {
 }
 
 func (FRK12 *FehlbergRK12) NextStep(xt, t float64) (float64, error) {
-	k1 := FRK12.timeFunc.EvaluateAt(xt, t)
-	k2 := FRK12.timeFunc.EvaluateAt(xt+k1*FRK12.halfDt, t+FRK12.halfDt)
+	k1 := FRK12.timeFunc.EvaluateAtTime(xt, t)
+	k2 := FRK12.timeFunc.EvaluateAtTime(xt+k1*FRK12.halfDt, t+FRK12.halfDt)
 
 	val := k1*FRK12.kCoefs[0] + k2*FRK12.kCoefs[1]
-	k3 := FRK12.timeFunc.EvaluateAt(xt+val*FRK12.deltaTime, t+FRK12.deltaTime)
+	k3 := FRK12.timeFunc.EvaluateAtTime(xt+val*FRK12.deltaTime, t+FRK12.deltaTime)
 
 	xtPlusdt1 := xt + FRK12.deltaTime*(k1*FRK12.b1Coefs[0]+k2*FRK12.b1Coefs[1]+k3*FRK12.b1Coefs[0])
 	xtPlusdt2 := xt + FRK12.deltaTime*(k1*FRK12.b2Coefs[0]+k2*FRK12.b1Coefs[1])
@@ -149,12 +149,12 @@ func (BS *BogackiShampine) adaptiveDt(dt float64) {
 }
 
 func (BS *BogackiShampine) NextStep(xt, t float64) (float64, error) {
-	k1 := BS.timeFunc.EvaluateAt(xt, t)
-	k2 := BS.timeFunc.EvaluateAt(xt+k1*BS.halfDt, t+BS.halfDt)
-	k3 := BS.timeFunc.EvaluateAt(xt+k2*BS.dt3By4, t+BS.dt3By4)
+	k1 := BS.timeFunc.EvaluateAtTime(xt, t)
+	k2 := BS.timeFunc.EvaluateAtTime(xt+k1*BS.halfDt, t+BS.halfDt)
+	k3 := BS.timeFunc.EvaluateAtTime(xt+k2*BS.dt3By4, t+BS.dt3By4)
 
 	val := k1*BS.kCoefs[0] + k2*BS.kCoefs[1] + k3*BS.kCoefs[2]
-	k4 := BS.timeFunc.EvaluateAt(xt+val*BS.deltaTime, t+BS.deltaTime)
+	k4 := BS.timeFunc.EvaluateAtTime(xt+val*BS.deltaTime, t+BS.deltaTime)
 
 	xtPlusdt1 := xt + BS.deltaTime*(k1*BS.b1Coefs[0]+k2*BS.b1Coefs[1]+k3*BS.b1Coefs[2])
 	xtPlusdt2 := xt + BS.deltaTime*(k1*BS.b1Coefs[0]+k2*BS.b1Coefs[1]+k3*BS.b1Coefs[2]+k4*BS.b1Coefs[3])
@@ -190,20 +190,20 @@ func (ark *adaptiveRKBase) adaptiveDt(dt float64) {
 }
 
 func (ark *adaptiveRKBase) NextStep(xt, t float64) (float64, error) {
-	k1 := ark.timeFunc.EvaluateAt(xt, t)
-	k2 := ark.timeFunc.EvaluateAt(xt+k1*ark.kCoefs[0]*ark.deltaTime, t+ark.dtCoefs[0])
+	k1 := ark.timeFunc.EvaluateAtTime(xt, t)
+	k2 := ark.timeFunc.EvaluateAtTime(xt+k1*ark.kCoefs[0]*ark.deltaTime, t+ark.dtCoefs[0])
 
 	val := k1*ark.kCoefs[1] + k2*ark.kCoefs[2]
-	k3 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[1])
+	k3 := ark.timeFunc.EvaluateAtTime(xt+val*ark.deltaTime, t+ark.dtCoefs[1])
 
 	val = k1*ark.kCoefs[3] + k2*ark.kCoefs[4] + k3*ark.kCoefs[5]
-	k4 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[2])
+	k4 := ark.timeFunc.EvaluateAtTime(xt+val*ark.deltaTime, t+ark.dtCoefs[2])
 
 	val = k1*ark.kCoefs[6] + k2*ark.kCoefs[7] + k3*ark.kCoefs[8] + k4*ark.kCoefs[9]
-	k5 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[3])
+	k5 := ark.timeFunc.EvaluateAtTime(xt+val*ark.deltaTime, t+ark.dtCoefs[3])
 
 	val = k1*ark.kCoefs[10] + k2*ark.kCoefs[11] + k3*ark.kCoefs[12] + k4*ark.kCoefs[13] + k5*ark.kCoefs[14]
-	k6 := ark.timeFunc.EvaluateAt(xt+val*ark.deltaTime, t+ark.dtCoefs[4])
+	k6 := ark.timeFunc.EvaluateAtTime(xt+val*ark.deltaTime, t+ark.dtCoefs[4])
 
 	integrant := k1*ark.b1Coefs[0] + k3*ark.b1Coefs[1] + k4*ark.b1Coefs[2] + k5*ark.b1Coefs[3] + k6*ark.b1Coefs[4]
 	xtPlusdt1 := xt + ark.deltaTime*integrant
@@ -318,23 +318,23 @@ func (DP *DormandPrince) adaptiveDt(dt float64) {
 }
 
 func (DP *DormandPrince) NextStep(xt, t float64) (float64, error) {
-	k1 := DP.timeFunc.EvaluateAt(xt, t)
-	k2 := DP.timeFunc.EvaluateAt(xt+k1*DP.kCoefs[0]*DP.deltaTime, t+DP.dtCoefs[0])
+	k1 := DP.timeFunc.EvaluateAtTime(xt, t)
+	k2 := DP.timeFunc.EvaluateAtTime(xt+k1*DP.kCoefs[0]*DP.deltaTime, t+DP.dtCoefs[0])
 
 	val := k1*DP.kCoefs[1] + k2*DP.kCoefs[2]
-	k3 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[1])
+	k3 := DP.timeFunc.EvaluateAtTime(xt+val*DP.deltaTime, t+DP.dtCoefs[1])
 
 	val = k1*DP.kCoefs[3] + k2*DP.kCoefs[4] + k3*DP.kCoefs[5]
-	k4 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[2])
+	k4 := DP.timeFunc.EvaluateAtTime(xt+val*DP.deltaTime, t+DP.dtCoefs[2])
 
 	val = k1*DP.kCoefs[6] + k2*DP.kCoefs[7] + k3*DP.kCoefs[8] + k4*DP.kCoefs[9]
-	k5 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.dtCoefs[3])
+	k5 := DP.timeFunc.EvaluateAtTime(xt+val*DP.deltaTime, t+DP.dtCoefs[3])
 
 	val = k1*DP.kCoefs[10] + k2*DP.kCoefs[11] + k3*DP.kCoefs[12] + k4*DP.kCoefs[13] + k5*DP.kCoefs[14]
-	k6 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.deltaTime)
+	k6 := DP.timeFunc.EvaluateAtTime(xt+val*DP.deltaTime, t+DP.deltaTime)
 
 	val = k1*DP.b1Coefs[0] + k3*DP.b1Coefs[1] + k4*DP.b1Coefs[2] + k5*DP.b1Coefs[3] + k6*DP.b1Coefs[4]
-	k7 := DP.timeFunc.EvaluateAt(xt+val*DP.deltaTime, t+DP.deltaTime)
+	k7 := DP.timeFunc.EvaluateAtTime(xt+val*DP.deltaTime, t+DP.deltaTime)
 
 	integrant := k1*DP.b1Coefs[0] + k3*DP.b1Coefs[1] + k4*DP.b1Coefs[2] + k5*DP.b1Coefs[3] + k6*DP.b1Coefs[4]
 	xtPlusdt1 := xt + DP.deltaTime*integrant

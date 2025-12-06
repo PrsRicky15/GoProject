@@ -27,7 +27,7 @@ func (eImFP *EulerImplicitFixPoint) NextStep(xt, t float64) (float64, error) {
 	xPre := xt
 
 	for iter := 0; iter < maxIter; iter++ {
-		fxt := eImFP.TdFunc.EvaluateAt(xPre, t+eImFP.DeltaT)
+		fxt := eImFP.TdFunc.EvaluateAtTime(xPre, t+eImFP.DeltaT)
 		xNew := xt + eImFP.DeltaT*fxt
 
 		if math.Abs(xNew-xPre) <= tolerance {
@@ -57,7 +57,7 @@ func (eImFP *EulerImplicitFixPoint) NextStepOnGrid(xt []float64, t float64) erro
 	eImFP.xPre = slices.Clone(xt)
 
 	for iter := 0; iter < maxIter; iter++ {
-		(eImFP.TdFunc).EvaluateOnRGridInPlace(eImFP.xPre, eImFP.fxt, t+eImFP.DeltaT)
+		(eImFP.TdFunc).EvaluateOnRGridTimeInPlace(eImFP.xPre, eImFP.fxt, t+eImFP.DeltaT)
 
 		for i := range eImFP.xNew {
 			eImFP.xNew[i] = xt[i] + eImFP.DeltaT*eImFP.fxt[i]
@@ -99,12 +99,12 @@ func (hIm *HeunsImplicitFixPoint) PredictIni(xt, fxt, xP []float64) {
 }
 
 func (hIm *HeunsImplicitFixPoint) NextStep(xt, t float64) (float64, error) {
-	fxt := (hIm.TdFunc).EvaluateAt(xt, t)
+	fxt := (hIm.TdFunc).EvaluateAtTime(xt, t)
 	predictor := xt + hIm.DeltaT*fxt
 	corrector := predictor
 
 	for i := 0; i < maxIter; i++ {
-		trapezoid := fxt + (hIm.TdFunc).EvaluateAt(corrector, t+hIm.DeltaT)
+		trapezoid := fxt + (hIm.TdFunc).EvaluateAtTime(corrector, t+hIm.DeltaT)
 		correctorNew := xt + 0.5*hIm.DeltaT*trapezoid
 
 		var err float64
@@ -142,7 +142,7 @@ func (hIm *HeunsImplicitFixPoint) iterate(xt, fxt, predictCorrect []float64, t f
 	nPoints := len(xt)
 
 	for i := range predictCorrect {
-		hIm.corrector[i] = fxt[i] + (hIm.TdFunc).EvaluateAt(predictCorrect[i], t+hIm.DeltaT)
+		hIm.corrector[i] = fxt[i] + (hIm.TdFunc).EvaluateAtTime(predictCorrect[i], t+hIm.DeltaT)
 	}
 	trapezoidal := blas64.Vector{N: nPoints, Data: hIm.corrector, Inc: 1}
 
@@ -167,7 +167,7 @@ func (hIm *HeunsImplicitFixPoint) iterate(xt, fxt, predictCorrect []float64, t f
 func (hIm *HeunsImplicitFixPoint) NextStepOnGrid(xt []float64, t float64) error {
 	nPoints := len(xt)
 	hIm.allocate(nPoints)
-	(hIm.TdFunc).EvaluateOnRGridInPlace(xt, hIm.fxt, t)
+	(hIm.TdFunc).EvaluateOnRGridTimeInPlace(xt, hIm.fxt, t)
 
 	hIm.PredictIni(xt, hIm.fxt, hIm.predictor)
 
@@ -200,7 +200,7 @@ func (mIm *MidPointFixPoint) NextStep(xt, t float64) (float64, error) {
 	var xNext float64
 	for iter := 0; iter < maxIter; iter++ {
 		xMid := 0.5 * (xt + xPre)
-		funcMid := mIm.TdFunc.EvaluateAt(xMid, tMid)
+		funcMid := mIm.TdFunc.EvaluateAtTime(xMid, tMid)
 		xNext = xt + mIm.DeltaT*funcMid
 
 		if math.Abs(xNext-xPre) < tolerance {
@@ -232,7 +232,7 @@ func (mIm *MidPointFixPoint) NextStepOnGrid(xt []float64, t float64) error {
 			mIm.xMid[i] = 0.5 * (xt[i] + mIm.xPre[i])
 		}
 
-		mIm.TdFunc.EvaluateOnRGridInPlace(mIm.xMid, mIm.fxt, tMid)
+		mIm.TdFunc.EvaluateOnRGridTimeInPlace(mIm.xMid, mIm.fxt, tMid)
 
 		for i := range xt {
 			mIm.xMid[i] = xt[i] + mIm.DeltaT*mIm.fxt[i]

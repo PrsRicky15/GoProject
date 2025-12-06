@@ -2,6 +2,7 @@ package OperatorAlgebra
 
 import (
 	"GoProject/gridData"
+	"errors"
 	"fmt"
 	"math"
 	"math/cmplx"
@@ -27,7 +28,7 @@ type KeDvrBasis struct {
 
 func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) error {
 	if len(In) != len(Out) {
-		return error("Vector dimensions do not match")
+		return errors.New("vector dimensions do not match")
 	}
 	return nil
 }
