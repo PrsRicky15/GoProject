@@ -96,13 +96,11 @@ func (PS1D *PoissonSolver1D) Initialize(maxIter int, tolerance, phiA, phiB float
 func (PS1D *PoissonSolver1D) IteratingStepMethod() ([]float64, int, error) {
 
 	for iter := 0; iter < PS1D.maxIter; iter++ {
-
 		errL2Norm := 0.0
 		for i := 1; i < PS1D.nMin1; i++ {
 			PS1D.phiNew[i] = 0.5 * (PS1D.phiPre[i+1] + PS1D.phiPre[i-1] - PS1D.rho[i]*PS1D.dx2)
 			errL2Norm += (PS1D.phiNew[i] - PS1D.phiPre[i]) * (PS1D.phiNew[i] - PS1D.phiPre[i])
 		}
-
 		copy(PS1D.phiPre, PS1D.phiNew)
 		if math.Sqrt(errL2Norm) < PS1D.tol {
 			return PS1D.phiNew, iter + 1, nil
@@ -114,7 +112,6 @@ func (PS1D *PoissonSolver1D) IteratingStepMethod() ([]float64, int, error) {
 
 func (PS1D *PoissonSolver1D) IteratingStepWithOmega(omega float64) ([]float64, int, error) {
 	for iter := 0; iter < PS1D.maxIter; iter++ {
-
 		errL2Norm := 0.0
 		for i := 1; i < PS1D.nMin1; i++ {
 			PS1D.phiNew[i] = 1 / (2 + omega) * (PS1D.phiPre[i+1] + omega*PS1D.phiPre[i] +
