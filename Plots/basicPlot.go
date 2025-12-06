@@ -114,7 +114,24 @@ func generateMorsePotentialSurfaceData(gridParams map[string]interface{}, params
 
 // Generate 1D potential energy surface data
 func generateSoftcorePotentialSurfaceData(gridParams map[string]interface{}, params map[string]interface{}) PlotDataResponse {
-	grid, _ := gridData.NewRGrid(gridParams["rMin"].(float64), gridParams["rMax"].(float64), gridParams["nGrid"].(uint32))
+	rMin := 0.
+	rMax := 15.
+	nGrid := uint32(20)
+	if val, ok := gridParams["rMin"].(float64); ok {
+		rMin = val
+	}
+	if val, ok := gridParams["a"].(float64); ok {
+		rMax = val
+	}
+	if val, ok := gridParams["r0"].(float64); ok {
+		nGrid = uint32(val)
+	}
+
+	grid, err := gridData.NewRGrid(rMin, rMax, nGrid)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Default parameters
 	charge := 1.0
 	a := 1.5
