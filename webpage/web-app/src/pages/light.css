@@ -54,7 +54,7 @@ body::after {
     50% { transform: translate(100px, -80px); }
 }
 
-.container {
+.CalcContainer {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;

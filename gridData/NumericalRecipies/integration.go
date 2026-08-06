@@ -1,8 +1,10 @@
 package NumericalRecipies
 
 type Integration interface {
-	Trapazoidal(dx float64) float64
-	LogTrapazoidal(dx float64) float64
-	Simpsons(dx float64) float64
-	LogSimpsons(dx float64) float64
+	Integrate(min, max float64, f func(x float64) float64) float64
+	LogIntegrate(min, max float64, f func(x float64) float64) float64
 }
+
+type SimpsonIntegrator struct{}
+type TrapezoidIntegrator struct{}
+type GaussIntegrator struct{}

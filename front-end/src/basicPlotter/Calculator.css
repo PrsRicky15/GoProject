@@ -1,0 +1,351 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html, #root {
+    width: 100%;
+    height: 100%;
+}
+
+.calculator-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.calculator-wrapper {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   SECTION 2: HEADER
+   ============================================ */
+
+.calculator-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calculator-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0;
+}
+
+.mode-toggle-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.mode-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.mode-toggle-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   SECTION 3: DISPLAY SCREEN
+   ============================================ */
+
+.calculator-display {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.display-operation {
+    color: #a0aec0;
+    font-size: 14px;
+    min-height: 20px;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 5px;
+}
+
+.display-value {
+    color: white;
+    font-size: 36px;
+    font-weight: 600;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+    min-height: 45px;
+}
+
+.display-value.error {
+    color: #fc8181;
+}
+
+/* ============================================
+   SECTION 4: SCIENTIFIC BUTTONS PANEL
+   ============================================ */
+
+.scientific-panel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+    animation: expandPanel 0.3s ease-out;
+}
+
+@keyframes expandPanel {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+    }
+}
+
+.scientific-btn {
+    background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
+    color: #6b21a8;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.scientific-btn:hover {
+    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+}
+
+.scientific-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   SECTION 5: MAIN BUTTON GRID
+   ============================================ */
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+/* Base button styles */
+.calc-btn {
+    border: none;
+    padding: 18px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.calc-btn:hover {
+    transform: translateY(-2px);
+}
+
+.calc-btn:active {
+    transform: translateY(0);
+}
+
+/* Ripple effect on click */
+.calc-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.calc-btn:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* ============================================
+   SECTION 6: BUTTON TYPES (by color/function)
+   ============================================ */
+
+/* Clear button - Red */
+.btn-clear {
+    background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+.btn-clear:hover {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    box-shadow: 0 6px 16px rgba(245, 101, 101, 0.4);
+}
+
+/* Backspace and special operators - Orange */
+.btn-special {
+    background: linear-gradient(135deg, #fbd38d 0%, #f6ad55 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+}
+
+.btn-special:hover {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    box-shadow: 0 6px 16px rgba(246, 173, 85, 0.4);
+}
+
+/* Basic operators - Vibrant Orange */
+.btn-operator {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+.btn-operator:hover {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    box-shadow: 0 6px 16px rgba(237, 137, 54, 0.4);
+}
+
+/* Number buttons - Light Gray */
+.btn-number {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    color: #2d3748;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-number:hover {
+    background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Equals button - Green */
+.btn-equals {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.btn-equals:hover {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+    box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+}
+
+/* ============================================
+   SECTION 7: SPECIAL GRID POSITIONS
+   ============================================ */
+
+.btn-span-2 {
+    grid-column: span 2;
+}
+
+/* ============================================
+   SECTION 8: FOOTER INFO
+   ============================================ */
+
+.calculator-info {
+    margin-top: 20px;
+    text-align: center;
+    color: #718096;
+    font-size: 12px;
+}
+
+/* ============================================
+   SECTION 9: RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 480px) {
+    .calculator-wrapper {
+        padding: 20px;
+        max-width: 100%;
+    }
+
+    .calculator-title {
+        font-size: 24px;
+    }
+
+    .display-value {
+        font-size: 28px;
+    }
+
+    .calc-btn {
+        padding: 14px;
+        font-size: 16px;
+    }
+
+    .scientific-btn {
+        padding: 10px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   SECTION 10: ACCESSIBILITY
+   ============================================ */
+
+.calc-btn:focus,
+.scientific-btn:focus,
+.mode-toggle-btn:focus {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .calc-btn {
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .calc-btn,
+    .scientific-btn,
+    .mode-toggle-btn,
+    .calculator-wrapper {
+        animation: none;
+        transition: none;
+    }
+}

@@ -14,7 +14,7 @@ type HamiltonianOp struct {
 	hmat mat.Matrix
 }
 
-func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp {
+func NewHamilDVR(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp {
 	kinE := OperatorAlgebra.NewKeDVR(grid, mass)
 	Hmat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
 	return &HamiltonianOp{
@@ -25,18 +25,42 @@ func NewHamil(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[flo
 	}
 }
 
-func (op *HamiltonianOp) Mat() {
+func NewHamilFD(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp {
+	kinE, err := OperatorAlgebra.NewFiniteDiff(grid, mass, 3)
+	if err != nil {
+		panic(err)
+	}
+	Hmat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
+	return &HamiltonianOp{
+		grid: grid,
+		kinE: kinE,
+		potE: Pot,
+		hmat: Hmat,
+	}
+}
+
+func NewHamilFourier(grid *gridData.RadGrid, mass float64, Pot gridData.PotentialOp[float64]) *HamiltonianOp {
+	kinE := OperatorAlgebra.FFTInit(grid, mass)
+	Hmat := mat.Matrix(mat.NewDense(int(grid.NPoints()), int(grid.NPoints()), nil))
+	return &HamiltonianOp{
+		grid: grid,
+		kinE: kinE,
+		potE: Pot,
+		hmat: Hmat,
+	}
+}
+
+func (op *HamiltonianOp) Mat() error {
 	vPot := op.grid.PotentialOnGrid(op.potE)
 	err := op.grid.PrintVectorToFileRe(vPot, "potent.dat", "%21.14e")
 	if err != nil {
-		return
+		return err
 	}
-	// need a change
-	op.hmat = op.kinE.KMat
 
 	for i := 0; i < int(op.grid.NPoints()); i++ {
 		op.hmat.(*mat.Dense).Set(i, i, op.hmat.At(i, i)+vPot[i])
 	}
+	return nil
 }
 
 func (op *HamiltonianOp) EvaluateOp() *mat.Dense {

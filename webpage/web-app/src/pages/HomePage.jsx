@@ -7,7 +7,7 @@ export default function QuantumChemistryHomepage() {
   const [activeFeature, setActiveFeature] = useState(0);
 
   useEffect(() => {
-    // Remove default margins from body
+    // Remove default margins from the body
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.documentElement.style.margin = '0';
@@ -86,10 +86,13 @@ export default function QuantumChemistryHomepage() {
           </span>
         </div>
         <div className="hidden md:flex space-x-8 text-sm">
-          <a href="#features" className="hover:text-purple-400 transition">Features</a>
-          <a href="#solutions" className="hover:text-purple-400 transition">Solutions</a>
-          <a href="#pricing" className="hover:text-purple-400 transition">Blog</a>
-          <a href="#docs" className="hover:text-purple-400 transition">Join Us</a>
+          <div className="hidden md:flex space-x-8 text-sm">
+            <a href="/" className="hover:text-purple-400 transition">Home</a>
+            <a href="/plots" className="hover:text-purple-400 transition">Plot Generator</a>
+            <a href="/Calculator" className="hover:text-purple-400 transition">Calculator</a>
+            <a href="#features" className="hover:text-purple-400 transition">Features</a>
+            <a href="/customfuncs" className="hover:text-purple-400 transition">Functions Sandbox</a>
+          </div>
         </div>
         <div className="flex space-x-4">
           <button className="px-4 py-2 text-sm hover:text-purple-400 transition">

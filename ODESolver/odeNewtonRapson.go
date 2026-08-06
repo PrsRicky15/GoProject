@@ -38,14 +38,14 @@ func (eImNw *EulerImplicitNewton) allocate(nPoints int) {
 func (eImNw *EulerImplicitNewton) NextStep(xt, t float64) (float64, error) {
 	xNext := xt
 	for iter := 0; iter < maxIter; iter++ {
-		fxt := eImNw.TdFunc.EvaluateAt(xNext, t+eImNw.DeltaT)
+		fxt := eImNw.TdFunc.EvaluateAtTime(xNext, t+eImNw.DeltaT)
 		Gxt := xNext - (xt + eImNw.DeltaT*fxt)
 
 		if math.Abs(Gxt) < tolerance {
 			return xNext, nil
 		}
 
-		derGxt := (eImNw.TdFunc.EvaluateAt(xNext+delta, t+eImNw.DeltaT) - fxt) / delta
+		derGxt := (eImNw.TdFunc.EvaluateAtTime(xNext+delta, t+eImNw.DeltaT) - fxt) / delta
 		jacobian := 1 - eImNw.DeltaT*derGxt
 
 		if math.Abs(jacobian) < 1e-14 {
@@ -63,7 +63,7 @@ func (eImNw *EulerImplicitNewton) NextStepOnGrid(xt []float64, t float64) error 
 	eImNw.allocate(nPoints)
 	eImNw.xNew = slices.Clone(xt)
 	for iter := 0; iter < maxIter; iter++ {
-		eImNw.TdFunc.EvaluateOnRGridInPlace(eImNw.xNew, eImNw.fxt, t+eImNw.DeltaT)
+		eImNw.TdFunc.EvaluateOnRGridTimeInPlace(eImNw.xNew, eImNw.fxt, t+eImNw.DeltaT)
 
 		eImNw.xPre = slices.Clone(xt)
 		blas64.Axpy(eImNw.DeltaT,
@@ -82,13 +82,13 @@ func (eImNw *EulerImplicitNewton) NextStepOnGrid(xt []float64, t float64) error 
 		}
 
 		for i := range eImNw.xNew {
-			spaceDerivative := (eImNw.TdFunc.EvaluateAt(eImNw.xNew[i]+delta, t+eImNw.DeltaT) - eImNw.fxt[i]) / delta
+			spaceDerivative := (eImNw.TdFunc.EvaluateAtTime(eImNw.xNew[i]+delta, t+eImNw.DeltaT) - eImNw.fxt[i]) / delta
 			eImNw.xPre[i] = 1 - eImNw.DeltaT*spaceDerivative
 		}
 
 		JacobianNorm := blas64.Nrm2(blas64.Vector{N: nPoints, Data: eImNw.xPre, Inc: 1})
 		if JacobianNorm < 1e-14 {
-			eImNw.TdFunc.EvaluateOnRGridInPlace(xt, eImNw.fxt, t+eImNw.DeltaT)
+			eImNw.TdFunc.EvaluateOnRGridTimeInPlace(xt, eImNw.fxt, t+eImNw.DeltaT)
 			for i := range eImNw.xNew {
 				eImNw.xNew[i] = xt[i] + eImNw.DeltaT*eImNw.fxt[i]
 			}
@@ -128,12 +128,12 @@ func (hIm *HeunsImplicitNewton) PredictIni(xt, fxt, xP []float64) {
 func (hIm *HeunsImplicitNewton) NextStep(xt, t float64) (float64, error) {
 	halfDt := 0.5 * hIm.DeltaT
 	xPre := xt
-	fxt := (hIm.TdFunc).EvaluateAt(xt, t)
+	fxt := (hIm.TdFunc).EvaluateAtTime(xt, t)
 	for i := 0; i < maxIter; i++ {
-		fNew := (hIm.TdFunc).EvaluateAt(xPre, t+hIm.DeltaT)
+		fNew := (hIm.TdFunc).EvaluateAtTime(xPre, t+hIm.DeltaT)
 		Gx := xPre - xt - halfDt*(fxt+fNew)
 
-		fxPDel := (hIm.TdFunc).EvaluateAt(xPre+delta, t+hIm.DeltaT)
+		fxPDel := (hIm.TdFunc).EvaluateAtTime(xPre+delta, t+hIm.DeltaT)
 		derFxt := (fxPDel - fNew) / delta
 		Jacobian := 1 - halfDt*derFxt
 
@@ -177,11 +177,11 @@ func (hIm *HeunsImplicitNewton) NextStepOnGrid(xt []float64, t float64) error {
 	hIm.allocate(nPoints)
 
 	halfDt := 0.5 * hIm.DeltaT
-	(hIm.TdFunc).EvaluateOnRGridInPlace(xt, hIm.fxt, t)
+	(hIm.TdFunc).EvaluateOnRGridTimeInPlace(xt, hIm.fxt, t)
 	hIm.PredictIni(xt, hIm.fxt, hIm.predictor)
 
 	for i := 0; i < maxIter; i++ {
-		(hIm.TdFunc).EvaluateOnRGridInPlace(hIm.predictor, hIm.diff, t+hIm.DeltaT)
+		(hIm.TdFunc).EvaluateOnRGridTimeInPlace(hIm.predictor, hIm.diff, t+hIm.DeltaT)
 
 		for j := range hIm.predictor {
 			hIm.diff[j] += hIm.fxt[j]
@@ -195,8 +195,8 @@ func (hIm *HeunsImplicitNewton) NextStepOnGrid(xt []float64, t float64) error {
 		// Gx := xPre - xt - halfDt*(fxt+fNew)
 		for j := range hIm.predictor {
 			hIm.diff[j] = hIm.predictor[j] - hIm.corrector[j]
-			fxCenter := (hIm.TdFunc).EvaluateAt(hIm.predictor[j], t+hIm.DeltaT)
-			fxPDel := (hIm.TdFunc).EvaluateAt(hIm.predictor[j]+delta, t+hIm.DeltaT)
+			fxCenter := (hIm.TdFunc).EvaluateAtTime(hIm.predictor[j], t+hIm.DeltaT)
+			fxPDel := (hIm.TdFunc).EvaluateAtTime(hIm.predictor[j]+delta, t+hIm.DeltaT)
 			derFxt := (fxPDel - fxCenter) / delta
 			hIm.jacobian[j] = 1 - halfDt*derFxt
 		}
@@ -255,14 +255,14 @@ func (m *MidPointNewton) NextStepIm(xt, t float64) (float64, error) {
 	xNext := xt
 	for iter := 0; iter < maxIter; iter++ {
 		xMid := (xt + xNext) / 2
-		fMid := m.TdFunc.EvaluateAt(xMid, tMid)
+		fMid := m.TdFunc.EvaluateAtTime(xMid, tMid)
 
 		Gx := xNext - xt - m.DeltaT*fMid
 		if math.Abs(Gx) < tolerance {
 			return xNext, nil
 		}
 
-		fPlus := m.TdFunc.EvaluateAt(xMid+delta, tMid)
+		fPlus := m.TdFunc.EvaluateAtTime(xMid+delta, tMid)
 		dFbydx := (fPlus - fMid) / delta
 		jacobian := 1 - halfDt*dFbydx
 		xNext -= Gx / jacobian

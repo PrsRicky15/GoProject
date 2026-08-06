@@ -10,12 +10,89 @@ type VarType interface {
 	float64 | complex128
 }
 
-// PotentialOp General interface for the evaluating the potential on a grid
-type PotentialOp[T VarType] interface {
+type Function[T VarType] interface {
 	EvaluateAt(x T) T
+	NDimEvaluateAt(x []T) T
+}
+
+type Rfunc interface {
+	Function[float64]
+}
+
+type RfuncFunc func(float64) float64
+
+func (f RfuncFunc) EvaluateAt(x float64) float64 { return f(x) }
+func (f RfuncFunc) NDimEvaluateAt(x []float64) float64 {
+    // TODO
+	panic("implement me")
+}
+
+type RectangleBarrier struct {
+	vax []float64
+	ax  []float64
+}
+
+func (RB *RectangleBarrier) NDimEvaluateAt(x []float64) float64 {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewRectBarrier(vax, ax []float64) *RectangleBarrier {
+	return &RectangleBarrier{vax: vax, ax: ax}
+}
+
+func (RB *RectangleBarrier) Redefine(vax, ax []float64) {
+	RB.ax = make([]float64, len(ax))
+	RB.vax = make([]float64, len(vax))
+	copy(RB.ax, ax)
+	copy(RB.vax, vax)
+}
+
+func (RB *RectangleBarrier) EvaluateAt(x float64) float64 {
+	for indx := range RB.ax {
+		if x < RB.ax[indx] {
+			return RB.vax[indx]
+		}
+	}
+	return 0
+}
+
+type Sinusoidal struct {
+	v0    float64
+	omega float64
+	phi   float64
+}
+
+func NewSin(v0, omega, phi float64) *Sinusoidal {
+	return &Sinusoidal{v0, omega, phi}
+}
+
+func (S *Sinusoidal) Redefine(v0, omega float64, phi float64) {
+	S.v0 = v0
+	S.omega = omega
+	S.phi = phi
+}
+
+func (S *Sinusoidal) EvaluateAt(x float64) float64 {
+	return S.v0 * math.Sin(x*S.omega+S.phi)
+}
+
+func (S *Sinusoidal) NDimEvaluateAt(x []float64) float64 {
+	r2 := 0.
+	for _, val := range x {
+		r2 += val * val
+	}
+	return S.v0 * math.Sin(math.Sqrt(r2)*S.omega+S.phi)
+}
+
+// PotentialOp General interface for evaluating the potential on a grid
+type PotentialOp[T VarType] interface {
+	Function[T]
 	EvaluateOnGrid(x []T) []T
+	EvaluateOnGridInPlace(fn, x []T)
 	ForceAt(x T) T
 	ForceOnGrid(x []T) []T
+	ForceOnGridInPlace(fn, x []T)
 }
 
 // Made generic to work with VarType
@@ -27,11 +104,23 @@ func onGrid[T VarType](f func(T) T, x []T) []T {
 	return results
 }
 
+// Made generic to work with VarType
+func onGridInPlace[T VarType](f func(T) T, fn, x []T) {
+	for i, val := range x {
+		fn[i] = f(val)
+	}
+}
+
 // Morse v(r)= De (1 - Exp(-(r-re))^2
 type Morse[T VarType] struct {
 	De    float64
 	Alpha float64
 	Cen   float64
+}
+
+func (m Morse[T]) NDimEvaluateAt(x []T) T {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m Morse[T]) String() string {
@@ -72,13 +161,12 @@ func (m Morse[T]) ForceAt(x T) T {
 	return result.(T)
 }
 
-func (m Morse[T]) EvaluateOnGrid(x []T) []T {
-	return onGrid(m.EvaluateAt, x)
-}
-
+func (m Morse[T]) EvaluateOnGrid(x []T) []T        { return onGrid(m.EvaluateAt, x) }
+func (m Morse[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(m.EvaluateAt, fn, x) }
 func (m Morse[T]) ForceOnGrid(x []T) []T {
 	return onGrid(m.ForceAt, x)
 }
+func (m Morse[T]) ForceOnGridInPlace(fn, x []T) { onGridInPlace(m.ForceAt, fn, x) }
 
 // MorseF64 For float64 specialization
 type MorseF64 Morse[float64]
@@ -114,6 +202,11 @@ type SoftCore[T VarType] struct {
 	Charge    float64
 	Centre    float64
 	SoftParam float64
+}
+
+func (sc SoftCore[T]) NDimEvaluateAt(x []T) T {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (sc SoftCore[T]) String() string {
@@ -158,10 +251,11 @@ func (sc SoftCore[T]) ForceAt(x T) T {
 func (sc SoftCore[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(sc.EvaluateAt, x)
 }
-
 func (sc SoftCore[T]) ForceOnGrid(x []T) []T {
 	return onGrid(sc.ForceAt, x)
 }
+func (sc SoftCore[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(sc.EvaluateAt, fn, x) }
+func (sc SoftCore[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(sc.ForceAt, fn, x) }
 
 // SoftCoreF64 For float64 specialization
 type SoftCoreF64 SoftCore[float64]
@@ -198,6 +292,11 @@ type Gaussian[T VarType] struct {
 	Strength float64
 }
 
+func (g Gaussian[T]) NDimEvaluateAt(_ []T) T {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (g Gaussian[T]) String() string {
 	return fmt.Sprintf("v0 Exp((x - x0)^2/(2 Sigma^2)),"+
 		" Where v0 = %g, x0 = %v, sigma = %g", g.Strength, g.Cen, g.Sigma)
@@ -208,11 +307,15 @@ func (g Gaussian[T]) EvaluateAt(x T) T {
 
 	switch any(x).(type) {
 	case float64:
-		gf64 := Gaussianf64(g)
-		result = gf64.evaluateAt(any(x).(float64))
+		xf := any(x).(float64)
+		expnt := (xf - g.Cen) / g.Sigma
+		result := g.Strength * math.Exp(-expnt*expnt/2.)
+		return any(result).(T)
 	case complex128:
-		gz64 := GaussianZ64(g)
-		result = gz64.evaluateAt(any(x).(complex128))
+		xc := any(x).(complex128)
+		expnt := (xc - complex(g.Cen, 0)) / complex(g.Sigma, 0)
+		result := complex(g.Strength, 0) * cmplx.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	default:
 		panic("unsupported type")
 	}
@@ -225,11 +328,17 @@ func (g Gaussian[T]) ForceAt(x T) T {
 
 	switch any(x).(type) {
 	case float64:
-		gf64 := Gaussianf64(g)
-		result = gf64.forceAt(any(x).(float64))
+		xf := any(x).(float64)
+		expnt := (xf - g.Cen) / g.Sigma
+		val := -g.Strength * expnt / g.Sigma
+		result := val * math.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	case complex128:
-		gz64 := GaussianZ64(g)
-		result = gz64.forceAt(any(x).(complex128))
+		xc := any(x).(complex128)
+		expnt := (xc - complex(g.Cen, 0)) / complex(g.Sigma, 0)
+		val := -complex(g.Strength/g.Sigma, 0) * expnt
+		result := val * cmplx.Exp(-expnt*expnt/2)
+		return any(result).(T)
 	default:
 		panic("unsupported type")
 	}
@@ -240,41 +349,16 @@ func (g Gaussian[T]) ForceAt(x T) T {
 func (g Gaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(g.EvaluateAt, x)
 }
-
 func (g Gaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(g.ForceAt, x)
 }
+func (g Gaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(g.EvaluateAt, fn, x) }
+func (g Gaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(g.ForceAt, fn, x) }
 
 func xBySigma(x float64, sigma float64) float64 {
 	return x / sigma
 }
 func xBySigmaZ64(x complex128, sigma float64) complex128 { return x / complex(sigma, 0) }
-
-type Gaussianf64 Gaussian[float64]
-
-func (g Gaussianf64) evaluateAt(x float64) float64 {
-	expnt := xBySigma(x-g.Cen, g.Sigma)
-	return g.Strength * math.Exp(-expnt*expnt/2.)
-}
-
-func (g Gaussianf64) forceAt(x float64) float64 {
-	expnt := xBySigma(x-g.Cen, g.Sigma)
-	val := -g.Strength * expnt / g.Sigma
-	return val * math.Exp(-expnt*expnt/2)
-}
-
-type GaussianZ64 Gaussian[complex128]
-
-func (g GaussianZ64) evaluateAt(x complex128) complex128 {
-	val := xBySigmaZ64(x-complex(g.Cen, 0.), g.Sigma)
-	return complex(g.Strength, 0.) * cmplx.Exp(-cmplx.Pow(val, 2)/2)
-}
-
-func (g GaussianZ64) forceAt(x complex128) complex128 {
-	expnt := xBySigmaZ64(x-complex(g.Cen, 0.), g.Sigma)
-	val := -complex(g.Strength/g.Sigma, 0.) * expnt
-	return val * cmplx.Exp(-cmplx.Pow(expnt, 2)/complex(2, 0.))
-}
 
 // MultiGaussian PotentialOp
 type MultiGaussian[T VarType] struct {
@@ -327,10 +411,11 @@ func (mg MultiGaussian[T]) ForceAt(x T) T {
 func (mg MultiGaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(mg.EvaluateAt, x)
 }
-
 func (mg MultiGaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(mg.ForceAt, x)
 }
+func (mg MultiGaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(mg.EvaluateAt, fn, x) }
+func (mg MultiGaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(mg.ForceAt, fn, x) }
 
 type MultiGaussF64 MultiGaussian[float64]
 
@@ -437,6 +522,11 @@ type SuperGaussian[T VarType] struct {
 	Order    uint8
 }
 
+func (sg SuperGaussian[T]) NDimEvaluateAt(x []T) T {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (sg SuperGaussian[T]) String() string {
 	return fmt.Sprintf("%g Exp[ ((x - %g)/ %g)^%v]", sg.Strength, sg.Cen, sg.Sigma, sg.Order)
 }
@@ -478,10 +568,11 @@ func (sg SuperGaussian[T]) ForceAt(x T) T {
 func (sg SuperGaussian[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(sg.EvaluateAt, x)
 }
-
 func (sg SuperGaussian[T]) ForceOnGrid(x []T) []T {
 	return onGrid(sg.ForceAt, x)
 }
+func (sg SuperGaussian[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(sg.EvaluateAt, fn, x) }
+func (sg SuperGaussian[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(sg.ForceAt, fn, x) }
 
 type SupGaussF64 SuperGaussian[float64]
 
@@ -515,6 +606,11 @@ func (sg SupGaussZ64) forceAt(x complex128) complex128 {
 type Harmonic[T VarType] struct {
 	Cen        float64
 	ForceConst float64
+}
+
+func (h Harmonic[T]) NDimEvaluateAt(x []T) T {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (h Harmonic[T]) String() string { return fmt.Sprintf("1/2 %g (x - %g)^2", h.ForceConst, h.Cen) }
@@ -556,10 +652,11 @@ func (h Harmonic[T]) ForceAt(x T) T {
 func (h Harmonic[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(h.EvaluateAt, x)
 }
-
 func (h Harmonic[T]) ForceOnGrid(x []T) []T {
 	return onGrid(h.ForceAt, x)
 }
+func (h Harmonic[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(h.EvaluateAt, fn, x) }
+func (h Harmonic[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(h.ForceAt, fn, x) }
 
 type HarmonicF64 Harmonic[float64]
 
@@ -663,10 +760,11 @@ func (p Polynomial[T]) ForceAt(x T) T {
 func (p Polynomial[T]) EvaluateOnGrid(x []T) []T {
 	return onGrid(p.EvaluateAt, x)
 }
-
 func (p Polynomial[T]) ForceOnGrid(x []T) []T {
 	return onGrid(p.ForceAt, x)
 }
+func (p Polynomial[T]) EvaluateOnGridInPlace(fn, x []T) { onGridInPlace(p.EvaluateAt, fn, x) }
+func (p Polynomial[T]) ForceOnGridInPlace(fn, x []T)    { onGridInPlace(p.ForceAt, fn, x) }
 
 type PolynomialF64 Polynomial[float64]
 
