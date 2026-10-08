@@ -1,6 +1,6 @@
 module GoProject
 
-go 1.25.1
+go 1.26.4
 
 require (
 	github.com/jvlmdr/go-fftw v0.0.0-20141125174720-15d8e1beab46

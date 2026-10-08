@@ -3,20 +3,27 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
+    "test": "bun test src/lib",
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.553.0",
+    "plotly.js-cartesian-dist-min": "4.1.2",
+    "plotly.js-gl3d-dist-min": "4.1.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/bun": "^1.4.2",
+    "@types/plotly.js": "^3.0.14",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
@@ -27,6 +34,8 @@
     "globals": "^16.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
+    "typescript": "~6.0.0",
+    "typescript-eslint": "^8.71.1",
     "vite": "^7.1.7"
   }
 }

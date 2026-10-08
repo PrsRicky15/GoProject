@@ -1,0 +1,3 @@
+[run]
+# Run Vite, ESLint, and their Node-shebang scripts with Bun.
+bun = true

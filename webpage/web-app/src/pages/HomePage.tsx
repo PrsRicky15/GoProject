@@ -3,20 +3,10 @@ import { Atom, Zap, Database, Users, ArrowRight, Play, Check } from 'lucide-reac
 import SolutionsSection from '../components/SolutionsSection';
 
 export default function QuantumChemistryHomepage() {
-  const [scrollY, setScrollY] = useState(0);
+
   const [activeFeature, setActiveFeature] = useState(0);
 
-  useEffect(() => {
-    // Remove default margins from body
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.documentElement.style.margin = '0';
-    document.documentElement.style.padding = '0';
-    
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -48,13 +38,6 @@ export default function QuantumChemistryHomepage() {
     }
   ];
 
-  const useCases = [
-    "Drug Discovery & Development",
-    "Materials Science Research",
-    "Catalysis Optimization",
-    "Protein Structure Analysis"
-  ];
-
   return (
     <div className="min-h-screen min-w-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
       {/* Animated Background */}
@@ -63,16 +46,14 @@ export default function QuantumChemistryHomepage() {
           className="absolute w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
           style={{
             top: '10%',
-            left: '20%',
-            transform: `translate(${scrollY * 0.1}px, ${scrollY * 0.15}px)`
+            left: '20%'
           }}
         />
         <div 
           className="absolute w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"
           style={{
             bottom: '10%',
-            right: '20%',
-            transform: `translate(-${scrollY * 0.08}px, -${scrollY * 0.12}px)`
+            right: '20%'
           }}
         />
       </div>
@@ -88,14 +69,14 @@ export default function QuantumChemistryHomepage() {
         <div className="hidden md:flex space-x-8 text-sm">
           <a href="#features" className="hover:text-purple-400 transition">Features</a>
           <a href="#solutions" className="hover:text-purple-400 transition">Solutions</a>
-          <a href="#pricing" className="hover:text-purple-400 transition">Blog</a>
-          <a href="#docs" className="hover:text-purple-400 transition">Join Us</a>
+          <a href="#tools" className="hover:text-purple-400 transition">Plotter &amp; Calculator</a>
+          <a href="#calculations" className="hover:text-purple-400 transition">Calculations</a>
         </div>
         <div className="flex space-x-4">
           <button className="px-4 py-2 text-sm hover:text-purple-400 transition">
             Sign In
           </button>
-          <button className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg text-sm font-medium hover:shadow-lg hover:shadow-purple-500/50 transition">
+          <button onClick={() => { window.location.hash = 'tools'; }} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg text-sm font-medium hover:shadow-lg hover:shadow-purple-500/50 transition">
             Get Started
           </button>
         </div>
@@ -124,7 +105,7 @@ export default function QuantumChemistryHomepage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
-            <button className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-medium text-lg hover:shadow-2xl hover:shadow-purple-500/50 transition flex items-center space-x-2">
+            <button onClick={() => { window.location.hash = 'tools'; }} className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-medium text-lg hover:shadow-2xl hover:shadow-purple-500/50 transition flex items-center space-x-2">
               <Play className="w-5 h-5" />
               <span>Try Yourself</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />

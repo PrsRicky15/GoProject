@@ -6,8 +6,6 @@ import (
 	"math"
 	"math/cmplx"
 
-	"gonum.org/v1/gonum/blas"
-	"gonum.org/v1/gonum/blas/cblas128"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -25,14 +23,26 @@ type KeDvrBasis struct {
 	kMatCached  bool
 }
 
-func (k *KeDvrBasis) ExpDtTo(Dt float64, In []float64, Out []float64) {
-	//TODO implement me
-	panic("implement me")
+func (k *KeDvrBasis) ExpDtTo(dt float64, in, out []float64) {
+	if len(out) != k.ndims {
+		panic("output vector has wrong dimension")
+	}
+	result, err := k.ExpDt(dt, in)
+	if err != nil {
+		panic(err)
+	}
+	copy(out, result)
 }
 
-func (k *KeDvrBasis) ExpIdtTo(Dt float64, In []complex128, Out []complex128) {
-	//TODO implement me
-	panic("implement me")
+func (k *KeDvrBasis) ExpIdtTo(dt float64, in, out []complex128) {
+	if len(out) != k.ndims {
+		panic("output vector has wrong dimension")
+	}
+	result, err := k.ExpIdt(dt, in)
+	if err != nil {
+		panic(err)
+	}
+	copy(out, result)
 }
 
 // NewKeDVR creates and initializes a new kinetic energy DVR basis
@@ -142,12 +152,13 @@ func (k *KeDvrBasis) GetComplexMat(theta float64) *mat.CDense {
 }
 
 // RealDiagonalize diagonalizes the real kinetic energy matrix
-func (k *KeDvrBasis) RealDiagonalize() (eigenvalues []float64, eigenvectors *mat.Dense, err error) {
-	eigenvalues = make([]float64, k.ndims)
-	eigenvectors = mat.NewDense(k.ndims, k.ndims, nil)
-	eigenvectors = k.GetMat()
-	err = RealDiagonalizeLapack(eigenvectors, eigenvalues)
-	return eigenvalues, eigenvectors, err
+func (k *KeDvrBasis) RealDiagonalize() ([]float64, *mat.Dense, error) {
+	values := make([]float64, k.ndims)
+	vectors := mat.DenseCopyOf(k.GetMat())
+	if err := RealDiagonalizeLapack(vectors, values); err != nil {
+		return nil, nil, err
+	}
+	return values, vectors, nil
 }
 
 // ExpDt computes exp(dt * K) and applies it to input vector
@@ -196,35 +207,27 @@ func (k *KeDvrBasis) ExpDtInPlace(dt float64, inOut []float64) error {
 // ExpIdt computes exp(i*dt*K) and applies it to complex input vector
 // This implements the complex-scaled exponential: exp(i*dt*K)
 func (k *KeDvrBasis) ExpIdt(dt float64, in []complex128) ([]complex128, error) {
-	if len(in) != k.ndims {
-		return nil, fmt.Errorf("input vector length %d doesn't match basis dimension %d", len(in), k.ndims)
+	if len(in) != k.ndims || math.IsNaN(dt) || math.IsInf(dt, 0) {
+		return nil, fmt.Errorf("invalid exponential input")
 	}
-
-	kMat := k.GetMat()
-	scaledMat := mat.NewDense(k.ndims, k.ndims, nil)
-	scaledMat.Scale(dt, kMat)
-
-	complexScaled := mat.NewCDense(k.ndims, k.ndims, nil)
-	for i := 0; i < k.ndims; i++ {
-		for j := 0; j < k.ndims; j++ {
-			complexScaled.Set(i, j, 1i*complex(scaledMat.At(i, j), 0))
+	values, vectors, err := k.RealDiagonalize()
+	if err != nil {
+		return nil, err
+	}
+	coefficients := make([]complex128, k.ndims)
+	for j, e := range values {
+		for i, z := range in {
+			coefficients[j] += complex(vectors.At(i, j), 0) * z
+		}
+		coefficients[j] *= cmplx.Exp(complex(0, dt*e))
+	}
+	out := make([]complex128, k.ndims)
+	for i := range out {
+		for j, c := range coefficients {
+			out[i] += complex(vectors.At(i, j), 0) * c
 		}
 	}
-
-	expMat := mat.NewCDense(k.ndims, k.ndims, nil)
-	//	expMat.Exp(complexScaled)
-
-	result := make([]complex128, k.ndims)
-	cblas128.Gemv(
-		blas.NoTrans,
-		complex(1, 0),
-		expMat.RawCMatrix(),
-		cblas128.Vector{N: len(in), Data: in, Inc: 1},
-		complex(0, 0),
-		cblas128.Vector{N: len(result), Data: result, Inc: 1},
-	)
-
-	return result, nil
+	return out, nil
 }
 
 func (k *KeDvrBasis) ExpIdtInPlace(dt float64, inOut []complex128) error {

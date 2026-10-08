@@ -1,0 +1,18 @@
+[
+  {"expression":"2+3*4", "expected":14},
+  {"expression":"2^3^2", "expected":512},
+  {"expression":"-2^2", "expected":-4},
+  {"expression":"(-2)^2", "expected":4},
+  {"expression":"2^-2", "expected":0.25},
+  {"expression":"1e-3*1000", "expected":1},
+  {"expression":"2**3", "expected":8},
+  {"expression":"pow(2,3)", "expected":8},
+  {"expression":"max(2,min(3,4))", "expected":3},
+  {"expression":"log(100)+ln(e)", "expected":3},
+  {"expression":"log10(1000)", "expected":3},
+  {"expression":"1/(4)", "expected":0.25},
+  {"expression":"sin(pi/2)", "expected":1},
+  {"expression":"round(-1.5)", "expected":-1},
+  {"expression":"round(1.5)", "expected":2},
+  {"expression":"-5%2", "expected":-1}
+]

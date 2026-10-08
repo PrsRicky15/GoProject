@@ -1,0 +1,5 @@
+github.com/jvlmdr/go-fftw v0.0.0-20141125174720-15d8e1beab46 h1:avLhS/DwHKubNxIgK9CVhuNlca+ET1KyB7hy94oIsqU=
+github.com/jvlmdr/go-fftw v0.0.0-20141125174720-15d8e1beab46/go.mod h1:aw0GGAw5JoLFpyBL4934LGOyHRxe4EOvHlZLd0C5OHA=
+github.com/orfjackal/gospec v0.0.0-20140731185859-a21081619255/go.mod h1:s9jdgxV9J9CqMIKkedEWkAI6u7WsfJRXokgrzVfK39Q=
+gonum.org/v1/gonum v0.16.0 h1:5+ul4Swaf3ESvrOnidPp4GZbzf0mxVQpDCYUQE7OJfk=
+gonum.org/v1/gonum v0.16.0/go.mod h1:fef3am4MQ93R2HHpKnLk4/Tbh/s0+wqD5nfa6Pnwy4E=

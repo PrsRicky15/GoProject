@@ -70,3 +70,8 @@ button {
 button:hover {
     background-color: #ddd;
 }
+.calculator { width: min(400px, calc(100% - 24px)); color: #222; box-sizing: border-box; }
+#display { box-sizing: border-box; width: 100%; }
+.row { gap: 5px; }
+.row button { min-width: 0; flex: 1; }
+#error { color: #b52d43; font-size: 13px; margin: 8px 0; }

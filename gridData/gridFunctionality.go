@@ -144,13 +144,16 @@ func generatePoints(g getGridData) []float64 {
 }
 
 func generateConjugatePoints(g getGridData) []float64 {
-	nby2 := g.getNgrid() / 2
-	values := make([]float64, g.getNgrid())
-	values[0] = 0.
-	values[g.getNgrid()/2] = -float64(nby2) * g.getdCS()
-	for i := uint32(1); i < nby2; i++ {
-		values[i] = -float64(i) * g.getdCS()
-		values[i+nby2] = float64(nby2-i) * g.getdCS()
+	n := int64(g.getNgrid())
+	values := make([]float64, n)
+	// FFTW ordering: zero, positive frequencies, then negative frequencies.
+	// For even n the Nyquist bin is negative.
+	for i := range values {
+		mode := int64(i)
+		if mode > (n-1)/2 {
+			mode -= n
+		}
+		values[i] = float64(mode) * g.getdCS()
 	}
 	return values
 }

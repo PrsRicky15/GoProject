@@ -39,16 +39,19 @@ func (vi *StromerVerlet) Redefine(poten gridData.PotentialOp[float64], dt float6
 }
 
 func (vi *StromerVerlet) Initiate(x, v float64) {
-	vi.prevX = x + v*vi.dt + 0.5*vi.dt2*vi.forceFunc.ForceAt(x)
+	vi.prevX = x - v*vi.dt + 0.5*vi.dt2*vi.forceFunc.ForceAt(x)
 }
 
 func (vi *StromerVerlet) InitiateGrid(x, v []float64) {
-	if vi.prevXGrid == nil {
+	if len(x) != len(v) {
+		panic("position and velocity lengths differ")
+	}
+	if len(vi.prevXGrid) != len(x) {
 		vi.prevXGrid = make([]float64, len(x))
-		for i := range x {
-			vi.prevXGrid[i] = x[i] + v[i]*vi.dt +
-				0.5*vi.dt2*vi.forceFunc.ForceAt(x[i])
-		}
+	}
+	for i := range x {
+		vi.prevXGrid[i] = x[i] - v[i]*vi.dt +
+			0.5*vi.dt2*vi.forceFunc.ForceAt(x[i])
 	}
 }
 
@@ -105,7 +108,7 @@ func (vv *VelocityVerlet) NextStep(x, v float64) (float64, float64) {
 
 func (vv *VelocityVerlet) NextStepOnGrid(x, v []float64) {
 
-	if vv.acc == nil {
+	if len(vv.acc) != len(v) {
 		vv.acc = make([]float64, len(v))
 	}
 
@@ -151,7 +154,7 @@ func (lf *LeapFrog) NextStep(x, v float64) (float64, float64) {
 }
 
 func (lf *LeapFrog) NextStepOnGrid(x, v []float64) {
-	if lf.vHalf == nil {
+	if len(lf.vHalf) != len(v) {
 		lf.vHalf = make([]float64, len(v))
 	}
 	for i := range v {
@@ -173,7 +176,7 @@ type Yoshida struct {
 }
 
 func (yo *Yoshida) Name() string {
-	return "Leap-Frog Integrator"
+	return "Yoshida Fourth-Order Integrator"
 }
 
 func (yo *Yoshida) NewDef(Poten gridData.PotentialOp[float64], dt float64) *Yoshida {
@@ -188,13 +191,12 @@ func (yo *Yoshida) NewDef(Poten gridData.PotentialOp[float64], dt float64) *Yosh
 		w1:       w1,
 		wAvg:     wAvg,
 		halfW1:   0.5 * w1,
-		halfWavg: 0.5 * wAvg,
+		halfWavg: wAvg,
 	}
 }
 
 func (yo *Yoshida) Redefine(Poten gridData.PotentialOp[float64], dt float64) {
-	yo.fnc = Poten
-	yo.dt = dt
+	*yo = *yo.NewDef(Poten, dt)
 }
 
 func (yo *Yoshida) NextStep(x, v float64) (float64, float64) {

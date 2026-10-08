@@ -261,7 +261,7 @@ func (rEx2 *Ralston2order) NextStep(xt, t float64) (float64, error) {
 	return xt + k1*rEx2.dt1by4 + k2*rEx2.dt3by4, nil
 }
 
-// Ralston3Order need to be completed
+// Ralston3Order is the three-stage third-order Ralston method.
 type Ralston3Order struct {
 	timeFunc gridData.TDPotentialOp
 	delTime  float64
@@ -299,36 +299,12 @@ func (rEx *Ralston3Order) ReDefine(dt float64, tdFunc gridData.TDPotentialOp) {
 func (rEx *Ralston3Order) NextStep(xt, t float64) (float64, error) {
 	k1 := rEx.timeFunc.EvaluateAt(xt, t)
 	k2 := rEx.timeFunc.EvaluateAt(xt+rEx.halfDt*k1, t+rEx.halfDt)
-	k3 := rEx.timeFunc.EvaluateAt(xt+rEx.threeBy4Dt*k1, t+rEx.threeBy4Dt)
+	k3 := rEx.timeFunc.EvaluateAt(xt+rEx.threeBy4Dt*k2, t+rEx.threeBy4Dt)
 	return xt + rEx.dtBy9*(2*k1+3*k2+4*k3), nil
 }
 
 func (rEx *Ralston3Order) NextStepOnGrid(xt []float64, t float64) error {
-	nPoints := len(xt)
-
-	// Allocate buffers only if necessary
-	if nPoints != rEx.fxt.N {
-		rEx.fxt = blas64.Vector{N: nPoints, Data: make([]float64, nPoints), Inc: 1}
-		rEx.xtMid = blas64.Vector{N: nPoints, Data: make([]float64, nPoints), Inc: 1}
-	}
-
-	// Compute xtMid = xt + halfDt * f(xt, t)
-	rEx.timeFunc.EvaluateOnRGridInPlace(xt, rEx.fxt.Data, t)
-	copy(rEx.xtMid.Data, xt)
-	blas64.Axpy(rEx.halfDt, rEx.fxt, rEx.xtMid)
-
-	// Compute f(xtMid, t + halfDt)
-	rEx.timeFunc.EvaluateOnRGridInPlace(rEx.xtMid.Data, rEx.fxt.Data, t+rEx.halfDt)
-
-	for i := 0; i < nPoints; i++ {
-		if math.IsNaN(rEx.fxt.Data[i]) || math.IsInf(rEx.fxt.Data[i], 0) {
-			return fmt.Errorf("the fxt is not valid")
-		}
-	}
-
-	blas64.Axpy(rEx.delTime, rEx.fxt, blas64.Vector{N: nPoints, Data: xt, Inc: 1})
-
-	return nil
+	return explicitGrid(rEx.timeFunc, xt, t, rEx.delTime, [][]float64{{}, {.5}, {0, .75}}, []float64{2. / 9, 1. / 3, 4. / 9}, []float64{0, .5, .75})
 }
 
 type Huens3Explicit struct {
@@ -808,11 +784,11 @@ func (nRK5ex *Nystrom5Explicit) NextStep(xt, t float64) (float64, error) {
 	val = k1*nRK5ex.ksCoefs[3] + k2*nRK5ex.ksCoefs[4] + k3*nRK5ex.ksCoefs[5]
 	k4 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[2])
 
-	val = k1*nRK5ex.ksCoefs[6] + k2*nRK5ex.ksCoefs[7] + k3*nRK5ex.ksCoefs[8] + k4*nRK5ex.ksCoefs[8]
+	val = k1*nRK5ex.ksCoefs[6] + k2*nRK5ex.ksCoefs[7] + k3*nRK5ex.ksCoefs[8] + k4*nRK5ex.ksCoefs[9]
 	k5 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[3])
 
-	val = k1*nRK5ex.ksCoefs[9] + k2*nRK5ex.ksCoefs[10] + k3*nRK5ex.ksCoefs[11] + k4*nRK5ex.ksCoefs[12]
-	k6 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[5])
+	val = k1*nRK5ex.ksCoefs[10] + k2*nRK5ex.ksCoefs[11] + k3*nRK5ex.ksCoefs[12] + k4*nRK5ex.ksCoefs[13]
+	k6 := nRK5ex.timeFunc.EvaluateAt(xt+val, t+nRK5ex.dtCoefs[4])
 
 	integrant := k1*nRK5ex.fnlCoefs[0] + k3*nRK5ex.fnlCoefs[1] + k5*nRK5ex.fnlCoefs[2] + k6*nRK5ex.fnlCoefs[1]
 

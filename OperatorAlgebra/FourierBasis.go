@@ -3,12 +3,14 @@ package OperatorAlgebra
 import (
 	"GoProject/gridData"
 	"fmt"
-	"math"
-	"math/rand/v2"
 	"runtime"
+	"sync"
 
 	"github.com/jvlmdr/go-fftw/fftw"
 )
+
+// FFTW execution is independent per instance, but planning/destruction is global.
+var fftwPlannerMu sync.Mutex
 
 // FourierBasis represents the kinetic energy operator in Fourier/DVR basis
 type FourierBasis struct {
@@ -31,12 +33,13 @@ func FFTInit(grid *gridData.RadGrid, mass float64) *FourierBasis {
 }
 
 func (f *FourierBasis) Redefine(grid *gridData.RadGrid, mass float64) {
-	(*fftw.Plan).Destroy(&f.fftPlan)
-	(*fftw.Plan).Destroy(&f.ifftPlan)
+	f.destroy()
 	f.initialize(grid, mass)
 }
 
 func (f *FourierBasis) initialize(grid *gridData.RadGrid, mass float64) {
+	fftwPlannerMu.Lock()
+	defer fftwPlannerMu.Unlock()
 	gridPoints := int(grid.NPoints())
 	kVal := grid.KValues()
 
@@ -51,13 +54,6 @@ func (f *FourierBasis) initialize(grid *gridData.RadGrid, mass float64) {
 	}
 
 	buff := fftw.NewArray(gridPoints)
-
-	for i := 0; i < gridPoints; i++ {
-		Re := rand.NormFloat64()
-		Im := rand.NormFloat64()
-		invMag := 1.0 / math.Sqrt(Re*Re+Im*Im)
-		buff.Set(i, complex(Re*invMag, Im*invMag))
-	}
 
 	fftPlan := *fftw.NewPlan(buff, buff, fftw.Forward, fftw.Estimate)
 	ifftPlan := *fftw.NewPlan(buff, buff, fftw.Backward, fftw.Estimate)
@@ -107,6 +103,9 @@ func (f *FourierBasis) backwardInPlace(InOut []complex128) {
 }
 
 func (f *FourierBasis) operatorOp(InOut []complex128, Op []float64) {
+	if len(InOut) != f.nPoints {
+		panic(fmt.Sprintf("FourierBasis: vector length %d, want %d", len(InOut), f.nPoints))
+	}
 	if len(f.Buff.Elems) != len(Op) {
 		panic(fmt.Sprintf("length mismatch: Buff.Elems=%d, kValues=%d",
 			len(f.Buff.Elems), len(Op)))
@@ -115,8 +114,10 @@ func (f *FourierBasis) operatorOp(InOut []complex128, Op []float64) {
 	copy(f.Buff.Elems, InOut)
 	f.fftPlan.Execute()
 
+	// FFTW leaves both transforms unnormalized, as in h2p's kinetic operator.
+	invN := 1 / float64(f.nPoints)
 	for i := range f.Buff.Elems {
-		f.Buff.Elems[i] *= complex(Op[i], 0)
+		f.Buff.Elems[i] *= complex(Op[i]*invN, 0)
 	}
 
 	f.ifftPlan.Execute()
@@ -128,32 +129,39 @@ func (f *FourierBasis) MomentumOpInPlace(InOut []complex128) {
 }
 
 func (f *FourierBasis) MomentumOp(In []complex128, Out []complex128) {
+	f.checkVectors(In, Out)
 	copy(Out, In)
 	f.MomentumOpInPlace(Out)
-	copy(Out, f.Buff.Elems)
 }
 
+// LaplacianOpInPlace applies kinetic energy -d²/dx²/(2m), retaining its legacy name.
 func (f *FourierBasis) LaplacianOpInPlace(InOut []complex128) {
 	f.operatorOp(InOut, f.keValues)
 }
 
 func (f *FourierBasis) LaplacianOp(In []complex128, Out []complex128) {
+	f.checkVectors(In, Out)
 	copy(Out, In)
 	f.LaplacianOpInPlace(Out)
-	copy(Out, f.Buff.Elems)
+}
+
+func (f *FourierBasis) checkVectors(in, out []complex128) {
+	if len(in) != f.nPoints || len(out) != f.nPoints {
+		panic(fmt.Sprintf("FourierBasis: vector lengths %d and %d, want %d", len(in), len(out), f.nPoints))
+	}
 }
 
 func (f *FourierBasis) destroy() {
 	if f != nil {
+		fftwPlannerMu.Lock()
+		defer fftwPlannerMu.Unlock()
 		(*fftw.Plan).Destroy(&f.fftPlan)
 		(*fftw.Plan).Destroy(&f.ifftPlan)
 	}
-	fmt.Println("Destroyed")
 }
 
 // Clean cleans up FFTW
 func (f *FourierBasis) Clean() {
 	runtime.SetFinalizer(f, nil)
 	f.destroy()
-	fmt.Println("Cleaned")
 }
