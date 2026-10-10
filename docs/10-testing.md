@@ -1,5 +1,10 @@
 # Testing, evidence and reproducibility
 
+The restored nD grid and new Hamiltonian have regression tests for coupled
+2D energies, degenerate 3D levels, 1–4D Fourier waves, unequal axes/masses,
+matrix-free residuals and second-order time propagation. See the
+[multidimensional verification notes](14-multidimensional-quantum.md#verification).
+
 [Documentation index](README.md)
 
 ## Commands

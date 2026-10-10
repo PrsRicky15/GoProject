@@ -3,11 +3,12 @@ import type { PlotResult } from './types';
 
 // @types/plotly.js omits the isosurface fields and types `value` as a scalar.
 // Keep those fields checked locally and bridge that upstream gap only here.
-interface IsosurfaceTrace {
-  type: 'isosurface'; x: Float64Array; y: Float64Array; z: Float64Array;
-  value: Float64Array; isomin: number; isomax: number;
+export interface IsosurfaceTrace {
+  type: 'isosurface'; x: Float64Array | number[]; y: Float64Array | number[]; z: Float64Array | number[];
+  value: Float64Array | number[]; isomin: number; isomax: number;
   surface: { count: number }; caps: Record<'x' | 'y' | 'z', { show: boolean }>;
-  colorscale: string; showscale: boolean;
+  colorscale: string; showscale?: boolean; opacity?: number;
+  colorbar?: { thickness: number; title: { text: string } };
 }
 
 export function makeFigure(result: PlotResult): { data: Data[]; layout: Partial<Layout> } {

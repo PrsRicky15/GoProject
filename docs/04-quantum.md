@@ -1,5 +1,9 @@
 # Quantum operators, spectra and propagation
 
+For multidimensional grids, coupled Hamiltonians, a matrix-free low-energy solver
+and axis-wise time propagation, see [the nD guide](14-multidimensional-quantum.md).
+The existing 1D API and browser workflow are described below.
+
 [Documentation index](README.md) · [Hamiltonian source](../Quantum/hamiltonian.go)
 
 ## Governing problem

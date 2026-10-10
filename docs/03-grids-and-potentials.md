@@ -4,6 +4,10 @@
 
 ## Spatial grid
 
+For the restored general `NDimGrid`, per-axis bounds, original tensor indexing and
+coupled potential functions, see [multidimensional grids](14-multidimensional-quantum.md).
+The section below describes the separate 1D `RadGrid` used by the browser.
+
 `RadGrid` stores bounds, point count, spacing and conjugate-space parameters.
 Despite the name, the active quantum page uses a Cartesian coordinate on a symmetric
 interval, not a radial equation with angular-momentum terms.

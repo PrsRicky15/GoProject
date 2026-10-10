@@ -45,9 +45,10 @@ export default memo(function PlotCanvas({ result, figure: suppliedFigure, label,
     state.queue = state.queue.then(async () => {
       if (!current || !state.alive) return;
       onStatus({ busy: true, error: '' });
-      const spatial = result ? ['surface', 'iso'].includes(result.settings.mode) : false;
+      const spatial = result ? ['surface', 'iso'].includes(result.settings.mode) : suppliedFigure!.data.some(trace => trace.type === 'surface' || trace.type === 'isosurface');
       const plotly = await loadPlotly(spatial);
       if (!current || !state.alive) return;
+      if (state.plotly && state.plotly !== plotly) { state.plotly.purge(state.node); state.ready = false; }
       state.plotly = plotly;
       if (spatial) {
         const canvas = document.createElement('canvas');

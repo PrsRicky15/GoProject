@@ -27,6 +27,22 @@ matrix diagonalization, time propagation, and classical model calculations.
 The [Hamiltonian guide](Quantum/README.md) describes the h2p-style operator
 composition, DVR and Fourier constructors, and numerical verification.
 
+### Multidimensional quantum calculations
+
+The original `NDimGrid` API is restored, with general Cartesian DVR/Fourier
+Hamiltonians, coupled potentials, iterative low-energy eigenstates and
+time-dependent propagation. See the [n-dimensional guide](docs/14-multidimensional-quantum.md).
+From the project root in your configured Go/FFTW environment:
+
+```sh
+go run ./cmd/ndquantum -dims 3 -points 20 -states 4
+```
+
+The Go API and this command support multidimensional calculations. In the browser,
+**Calculations → N-dimensional states** provides 2D–4D energy levels, ten model
+potentials, per-axis controls and density projections/isosurfaces. See the
+[web potential guide](docs/15-web-multidimensional-potentials.md).
+
 ### Web app
 
 The Go server handles plot, quantum and classical calculations and serves the TypeScript/React app.

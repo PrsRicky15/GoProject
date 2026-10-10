@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { decodeSimulation, simulationDefaults } from './simulation';
+import { decodeSimulation, simulationDefaults, ndAxes } from './simulation';
 
 describe('calculation response validation', () => {
  const request = simulationDefaults('quantum');
@@ -16,5 +16,24 @@ describe('calculation response validation', () => {
  });
  test('rejects particle frames that do not match the requested system', () => {
   expect(() => decodeSimulation({ ...response, frames: [{ time: 0, x: [1], y: [1] }] }, simulationDefaults('md'))).toThrow();
+ });
+ test('validates multidimensional volume lengths and keeps potential units', () => {
+  const ndRequest = simulationDefaults('nd-spectrum');
+  ndRequest.nd = { ...ndRequest.nd!, axes: ndAxes(3).map(axis => ({ ...axis, points: 4 })) };
+  const volume = { title: '3D density', labels: ['x1', 'x2', 'x3'], x: Array(64).fill(0), y: Array(64).fill(0), z: Array(64).fill(0), values: Array(64).fill(.1) };
+  const ndResponse = { ...response, volume, charts: [{ ...response.charts[0], valueLabel: 'V' }] };
+  const result = decodeSimulation(ndResponse, ndRequest);
+  expect(result.volume?.values.length).toBe(64);
+  expect(result.charts[0].valueLabel).toBe('V');
+  expect(() => decodeSimulation({ ...ndResponse, volume: { ...volume, values: [1] } }, ndRequest)).toThrow();
+  expect(() => decodeSimulation({ ...ndResponse, volume: { ...volume, values: Array(64).fill(-1) } }, ndRequest)).toThrow();
+  expect(() => decodeSimulation({ ...ndResponse, volume: { ...volume, x: Array(64).fill(NaN) } }, ndRequest)).toThrow();
+  expect(() => decodeSimulation(ndResponse, request)).toThrow();
+ });
+ test('dimension presets fit the web tensor budget and own their arrays', () => {
+  for (const d of [2, 3, 4]) expect(ndAxes(d).reduce((n, axis) => n * axis.points, 1)).toBeLessThanOrEqual(8192);
+  const first = simulationDefaults('nd-spectrum'); const second = simulationDefaults('nd-spectrum');
+  first.nd!.axes[0].points = 4;
+  expect(second.nd!.axes[0].points).toBe(24);
  });
 });

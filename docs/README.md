@@ -3,6 +3,7 @@
 These notes describe **QuantumMLD**, whose Go module is named `GoProject`.
 Prepared from the working source and finalized on **2026-10-08**, they cover the active app,
 numerical libraries, tests, configuration, and older experimental files.
+The n-dimensional web potential guide and related scope notes were updated on 2026-10-10.
 
 ## Contents and reading order
 
@@ -21,6 +22,8 @@ numerical libraries, tests, configuration, and older experimental files.
 | [11 — Status and limitations](11-status-and-limitations.md) | Working features, partial methods, observed defects and missing features |
 | [12 — Development](12-development.md) | Adding features, optimization opportunities and maintenance |
 | [13 — Repository map](13-repository-map.md) | Source-file responsibilities, tests, configuration and legacy inventory |
+| [14 — Multidimensional quantum calculations](14-multidimensional-quantum.md) | Restored NDimGrid, coupled Hamiltonians, iterative eigenstates, propagation and runnable examples |
+| [15 — Web multidimensional potentials](15-web-multidimensional-potentials.md) | Ten models, per-axis controls, normalized projections, isosurfaces and nD API bounds |
 
 For a first run, read 01 and 02, then the guide for your calculation. For numerical
 development, read 03–06, 10 and 11. For web development, read 07–09 and 12.
@@ -29,7 +32,7 @@ development, read 03–06, 10 and 11. For web development, read 07–09 and 12.
 
 | Term | Meaning here |
 | --- | --- |
-| Basis | Representation of the kinetic operator on a 1D spatial grid |
+| Basis | Representation of a kinetic operator; the nD library applies it along every tensor-grid axis |
 | DVR | Discrete variable representation; the page uses a symmetric-domain sinc matrix |
 | Fourier | Periodic spectral kinetic operator using FFTW |
 | Hamiltonian | `H = T + V`, applied to a real or complex grid vector |

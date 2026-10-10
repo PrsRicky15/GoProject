@@ -15,6 +15,7 @@ here so the paths match the files.
 | [go.mod](../go.mod), [go.sum](../go.sum) | Go module `GoProject` and dependency checksums |
 | [main.go](../main.go) | Empty legacy program; not the web entry point |
 | [cmd/web/main.go](../cmd/web/main.go) | Server flags, timeouts, listen address and graceful shutdown |
+| [cmd/ndquantum/main.go](../cmd/ndquantum/main.go) | Runnable n-dimensional coupled oscillator, JSON energies and optional density CSV |
 | [testdata/math-expressions.json](../testdata/math-expressions.json) | Shared arithmetic fixtures |
 | `docs/` | These full-project notes |
 | `.gitignore`, `.gitattributes` | Repository exclusion/text handling rules |
@@ -25,6 +26,9 @@ here so the paths match the files.
 | Source | Responsibility |
 | --- | --- |
 | [grid.go](../gridData/grid.go) | Spatial grid, metadata, input files, evaluation/output convenience methods |
+| [gridHigherDim.go](../gridData/gridHigherDim.go) | Restored NDimGrid, original tensor layout, general potential interface and checked file/indexing helpers |
+| [gridHigherDim_test.go](../gridData/gridHigherDim_test.go) | Multidimensional layout, validation, ownership and file regressions |
+| [nd_potentials.go](../gridData/nd_potentials.go) | Explicit radial/additive nD extensions of existing potential types |
 | [timegrid.go](../gridData/timegrid.go) | Time grid, macro/micro setup and input file reader |
 | [gridFunctionality.go](../gridData/gridFunctionality.go) | Shared spacing, coordinate/frequency generation, display and file output |
 | [potential.go](../gridData/potential.go) | Generic real/complex potentials and forces |
@@ -48,6 +52,7 @@ here so the paths match the files.
 | --- | --- |
 | [dvrBasis.go](../OperatorAlgebra/dvrBasis.go) | DVR kinetic matrix/cache, complex scaling, real diagonalization and exponentials |
 | [FourierBasis.go](../OperatorAlgebra/FourierBasis.go) | FFTW lifecycle and momentum/kinetic application |
+| [fourier_multiplier.go](../OperatorAlgebra/fourier_multiplier.go) | Normalized complex spectral multiplier for kinetic propagation |
 | [FiniteDifference.go](../OperatorAlgebra/FiniteDifference.go) | Incomplete/inconsistent finite-difference kinetic stencils |
 | [derivativeOp.go](../OperatorAlgebra/derivativeOp.go) | Legacy operator interfaces; some signatures no longer match concrete types |
 | [matrixoperation.go](../OperatorAlgebra/matrixoperation.go) | Real symmetric diagonalization and legacy complex wrapper |
@@ -63,6 +68,11 @@ here so the paths match the files.
 | [hamiltonian.go](../Quantum/hamiltonian.go) | Checked constructors, T+V composition, potentials, matrix/eigen APIs and energy |
 | [kinetic.go](../Quantum/kinetic.go) | Private DVR/Fourier adapters for Hamiltonian application |
 | [propagation.go](../Quantum/propagation.go) | Cached dense kinetic eigensystem and midpoint Strang steps |
+| [nd_hamiltonian.go](../Quantum/nd_hamiltonian.go) | Cartesian tensor DVR/Fourier Hamiltonian, coupled/time-dependent potentials and bounded dense operations |
+| [nd_eigensolver.go](../Quantum/nd_eigensolver.go) | Restarted block Krylov/Rayleigh–Ritz low-energy solver, residual checks and cancellation |
+| [nd_propagation.go](../Quantum/nd_propagation.go) | Axis-wise Strang propagation with Fourier phases or one-axis DVR eigensystems |
+| [nd_hamiltonian_test.go](../Quantum/nd_hamiltonian_test.go) | Coupled/anisotropic/degenerate spectra, plane waves, propagation convergence and compatibility |
+| [nd_clustered_test.go](../Quantum/nd_clustered_test.go) | Localized 3D well spectrum compared with a full dense reference |
 | [hamiltonian_test.go](../Quantum/hamiltonian_test.go) | Operators, spectra, time dependence, aliasing and validation |
 | [README.md](../Quantum/README.md) | Focused package quick reference and executable example |
 

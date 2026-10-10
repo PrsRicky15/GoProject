@@ -11,6 +11,43 @@ import (
 
 type Evaluator func(x, y, z float64) float64
 
+// NDEvaluator accepts the coordinates x1, ..., xN. Incorrect coordinate counts
+// return NaN; callers must also reject non-finite results from domain errors.
+type NDEvaluator func(coordinates []float64) float64
+
+// Passing coordinates by value preserves allocation-free legacy plot sampling.
+type evaluationPoint struct {
+	x, y, z     float64
+	coordinates []float64
+}
+type expressionNode func(evaluationPoint) float64
+
+func Compile(source string, dimensions int) (Evaluator, error) {
+	fn, err := compile(source, dimensions, false)
+	if err != nil {
+		return nil, err
+	}
+	return func(x, y, z float64) float64 { return fn(evaluationPoint{x: x, y: y, z: z}) }, nil
+}
+
+// CompileND parses the same bounded grammar as Compile, using indexed variable
+// names instead of x/y/z. It supports arbitrary positive dimensionality.
+func CompileND(source string, dimensions int) (NDEvaluator, error) {
+	if dimensions < 1 {
+		return nil, fmt.Errorf("dimensions must be positive")
+	}
+	fn, err := compile(source, dimensions, true)
+	if err != nil {
+		return nil, err
+	}
+	return func(coordinates []float64) float64 {
+		if len(coordinates) != dimensions {
+			return math.NaN()
+		}
+		return fn(evaluationPoint{coordinates: coordinates})
+	}, nil
+}
+
 var tokenPattern = regexp.MustCompile(`^(?:\s+|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|[a-zA-Z_][a-zA-Z_0-9]*|[+\-*/%^(),])`)
 
 var unaryFunctions = map[string]func(float64) float64{
@@ -49,15 +86,16 @@ var operations = map[string]operation{
 type parser struct {
 	tokens             []string
 	cursor, dimensions int
+	indexed            bool
 }
 
 // Compile parses once, then reuses the evaluation tree at every sample point.
-func Compile(source string, dimensions int) (Evaluator, error) {
+func compile(source string, dimensions int, indexed bool) (expressionNode, error) {
 	if len(source) > 1024 {
 		return nil, fmt.Errorf("keep expressions under 1,024 bytes")
 	}
 	input := strings.ReplaceAll(strings.ReplaceAll(source, "π", "pi"), "**", "^")
-	p := parser{dimensions: dimensions}
+	p := parser{dimensions: dimensions, indexed: indexed}
 	for len(input) > 0 {
 		token := tokenPattern.FindString(input)
 		if token == "" {
@@ -92,13 +130,13 @@ func (p *parser) consume(want string) error {
 	return nil
 }
 
-func (p *parser) parse(minimum int) (Evaluator, error) {
+func (p *parser) parse(minimum int) (expressionNode, error) {
 	if p.cursor >= len(p.tokens) {
 		return nil, fmt.Errorf("expression is incomplete")
 	}
 	token := p.tokens[p.cursor]
 	p.cursor++
-	var left Evaluator
+	var left expressionNode
 	switch {
 	case token == "+" || token == "-":
 		operand, err := p.parse(3)
@@ -107,7 +145,7 @@ func (p *parser) parse(minimum int) (Evaluator, error) {
 		}
 		left = operand
 		if token == "-" {
-			left = func(x, y, z float64) float64 { return -operand(x, y, z) }
+			left = func(point evaluationPoint) float64 { return -operand(point) }
 		}
 	case token == "(":
 		var err error
@@ -119,15 +157,21 @@ func (p *parser) parse(minimum int) (Evaluator, error) {
 			return nil, err
 		}
 	case token == "pi":
-		left = func(_, _, _ float64) float64 { return math.Pi }
+		left = func(_ evaluationPoint) float64 { return math.Pi }
 	case token == "e":
-		left = func(_, _, _ float64) float64 { return math.E }
-	case token == "x" && p.dimensions >= 1:
-		left = func(x, _, _ float64) float64 { return x }
-	case token == "y" && p.dimensions >= 2:
-		left = func(_, y, _ float64) float64 { return y }
-	case token == "z" && p.dimensions >= 3:
-		left = func(_, _, z float64) float64 { return z }
+		left = func(_ evaluationPoint) float64 { return math.E }
+	case !p.indexed && token == "x" && p.dimensions >= 1:
+		left = func(point evaluationPoint) float64 { return point.x }
+	case !p.indexed && token == "y" && p.dimensions >= 2:
+		left = func(point evaluationPoint) float64 { return point.y }
+	case !p.indexed && token == "z" && p.dimensions >= 3:
+		left = func(point evaluationPoint) float64 { return point.z }
+	case p.indexed && strings.HasPrefix(token, "x"):
+		index, err := strconv.Atoi(token[1:])
+		if err != nil || index < 1 || index > p.dimensions || token != fmt.Sprintf("x%d", index) {
+			return nil, fmt.Errorf("unknown coordinate %q; use x1 through x%d", token, p.dimensions)
+		}
+		left = func(point evaluationPoint) float64 { return point.coordinates[index-1] }
 	case unaryFunctions[token] != nil:
 		fn := unaryFunctions[token]
 		if err := p.consume("("); err != nil {
@@ -140,7 +184,7 @@ func (p *parser) parse(minimum int) (Evaluator, error) {
 		if err = p.consume(")"); err != nil {
 			return nil, err
 		}
-		left = func(x, y, z float64) float64 { return fn(operand(x, y, z)) }
+		left = func(point evaluationPoint) float64 { return fn(operand(point)) }
 	case binaryFunctions[token] != nil:
 		fn := binaryFunctions[token]
 		if err := p.consume("("); err != nil {
@@ -160,13 +204,13 @@ func (p *parser) parse(minimum int) (Evaluator, error) {
 		if err = p.consume(")"); err != nil {
 			return nil, err
 		}
-		left = func(x, y, z float64) float64 { return fn(a(x, y, z), b(x, y, z)) }
+		left = func(point evaluationPoint) float64 { return fn(a(point), b(point)) }
 	default:
 		value, err := strconv.ParseFloat(token, 64)
 		if err != nil || !finite(value) {
 			return nil, fmt.Errorf("unknown name or invalid number: %q", token)
 		}
-		left = func(_, _, _ float64) float64 { return value }
+		left = func(_ evaluationPoint) float64 { return value }
 	}
 	for p.cursor < len(p.tokens) {
 		token := p.tokens[p.cursor]
@@ -184,7 +228,7 @@ func (p *parser) parse(minimum int) (Evaluator, error) {
 			return nil, err
 		}
 		previous := left
-		left = func(x, y, z float64) float64 { return op.apply(previous(x, y, z), right(x, y, z)) }
+		left = func(point evaluationPoint) float64 { return op.apply(previous(point), right(point)) }
 	}
 	return left, nil
 }

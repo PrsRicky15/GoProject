@@ -5,10 +5,12 @@ import { CALCULATIONS, CALCULATION_KEYS, runSimulation, simulationDefaults } fro
 import type { CalculationKind, SimulationRequest, SimulationResult } from '../lib/simulation';
 import SimulationChart from '../components/SimulationChart';
 import ParticlePlayback from '../components/ParticlePlayback';
+import NDControls from '../components/NDControls';
+import DensityVolume from '../components/DensityVolume';
 import './workbench.css';
 import './calculations.css';
 
-type NumberKey = { [K in keyof SimulationRequest]: SimulationRequest[K] extends number ? K : never }[keyof SimulationRequest];
+type NumberKey = { [K in keyof SimulationRequest]-?: SimulationRequest[K] extends number ? K : never }[keyof SimulationRequest];
 
 export default function Calculations() {
   const [draft, setDraft] = useState(() => simulationDefaults('spectrum'));
@@ -19,7 +21,8 @@ export default function Calculations() {
   const controller = useRef<AbortController | null>(null);
   const quantum = draft.kind === 'quantum' || draft.kind === 'spectrum';
   const md = draft.kind === 'md';
-  const evolving = draft.kind !== 'spectrum';
+  const nd = draft.kind === 'nd-spectrum';
+  const evolving = draft.kind !== 'spectrum' && !nd;
   const update = (patch: Partial<SimulationRequest>) => setDraft(d => ({ ...d, ...patch }));
   useEffect(() => {
     if (!request) return;
@@ -35,6 +38,8 @@ export default function Calculations() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (Object.values(draft).some(v => typeof v === 'number' && !Number.isFinite(v))) { setError('Complete all numerical fields.'); return; }
+    if (draft.nd && (draft.nd.axes.some(axis => Object.values(axis).some(v => !Number.isFinite(v))) || Object.values(draft.nd).some(v => typeof v === 'number' && !Number.isFinite(v)))) { setError('Complete all coordinate and potential fields.'); return; }
+    if (draft.nd && draft.nd.axes.reduce((n, axis) => n * axis.points, 1) > 8192) { setError('Reduce the grid to at most 8,192 total points.'); return; }
     setError(''); setBusy(true); setRequest({ ...draft });
   }
   function switchKind(kind: CalculationKind) { setDraft(simulationDefaults(kind)); setError(''); }
@@ -49,7 +54,8 @@ export default function Calculations() {
       <div className="calculation-grid">
         <section className="panel calculation-controls"><div className="section-heading"><h2>{CALCULATIONS[draft.kind].name}</h2><span className="step-label">01 / MODEL</span></div><p className="muted">{CALCULATIONS[draft.kind].description}</p>
           <form onSubmit={submit}>
-            {!md && <>
+            {nd && <NDControls request={draft} update={update} />}
+            {!md && !nd && <>
               <div className="field"><label htmlFor="sim-potential">Potential</label><select id="sim-potential" value={draft.potential} disabled={draft.kind === 'molecular'} onChange={e => update({ potential: e.target.value })}><option value="harmonic">Harmonic oscillator</option><option value="morse">Morse bond</option><option value="double-well">Symmetric double well</option><option value="free">Free particle</option></select></div>
               <p className="model-formula">{draft.potential === 'harmonic' ? 'V(x) = ½ k (x − center)²' : draft.potential === 'morse' ? 'V(x) = Dₑ [1 − exp(−α(x − center))]²' : draft.potential === 'double-well' ? 'V(x) = strength (½ x⁴ − x²)' : 'V(x) = 0'}</p>
               <div className="parameter-pair">{number('mass', draft.kind === 'molecular' ? 'Reduced mass' : 'Mass', .1, 100)}{draft.potential !== 'free' && number('strength', draft.potential === 'harmonic' ? 'Spring constant k' : draft.potential === 'morse' ? 'Well depth Dₑ' : 'Strength', .01, 100)}</div>
@@ -85,6 +91,7 @@ export default function Calculations() {
             <div className="metrics-grid">{result.metrics.map(metric => <div className="panel metric" key={metric.label}><span>{metric.label}</span><strong>{metric.value.toPrecision(7)}</strong></div>)}</div>
             {result.frames && <ParticlePlayback key={JSON.stringify(result.request)} frames={result.frames} box={result.request.box} />}
             <div className="result-charts">{result.charts.map((chart, index) => <SimulationChart key={index} chart={chart} />)}</div>
+            {result.volume && <DensityVolume key={JSON.stringify(result.request)} volume={result.volume} />}
             <section className="panel result-notes"><h3>How to interpret this run</h3>{result.notes.map(note => <p key={note}>{note}</p>)}<details><summary>Parameters used for this result</summary><pre>{JSON.stringify(result.request, null, 2)}</pre></details></section>
           </>}
         </div>

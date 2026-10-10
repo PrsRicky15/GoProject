@@ -1,4 +1,10 @@
-# One-dimensional Hamiltonian
+# Hamiltonians in one or multiple dimensions
+
+For your restored `NDimGrid` and the new general Cartesian Hamiltonian, see the
+[multidimensional guide](../docs/14-multidimensional-quantum.md). It includes
+`NewNDimHamiltonian`, `NewNDimFourierHamiltonian`, `LowestStates`, and
+`NewNDimSplitPropagator`, with coupled potentials and runnable examples.
+The following reference describes the existing **1D** API used by the web page.
 
 For full-project context, see the [documentation index](../docs/README.md),
 [detailed quantum notes](../docs/04-quantum.md), and

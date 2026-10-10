@@ -21,6 +21,13 @@ problems. See [testing](10-testing.md) for the evidence and coverage gaps.
 
 ## Completed repairs
 
+The restored `NDimGrid` now connects to general Cartesian
+DVR/Fourier Hamiltonians, coupled potentials, iterative low-energy eigenstates
+and multidimensional split propagation. It is runnable through `cmd/ndquantum`.
+See [the multidimensional guide](14-multidimensional-quantum.md) for recovery
+provenance, verification and allocation limits. The browser now exposes 2D–4D
+energy levels with ten models; see [web potentials](15-web-multidimensional-potentials.md).
+
 | Area | Change now present |
 | --- | --- |
 | DVR exponentials | `ExpIdt`, `ExpIdtTo`, `ExpDtTo` perform their stated operations |
@@ -76,8 +83,10 @@ project's complete solver interface.
 
 ## Current model limits
 
-Quantum models are 1D, use real local potentials, finite domains, and have no
-absorbing boundary. Fourier is periodic. Dense eigensolvers limit practical scale.
+Browser quantum dynamics is 1D; energy-level models also cover 2D–4D. The Go library handles n-dimensional Cartesian
+grids with coupled real local potentials. Both use finite domains and have no
+absorbing boundary. Fourier is periodic. The nD solver can avoid the full dense
+matrix, but tensor-grid state size still grows exponentially with dimension.
 There is no automatic spatial refinement or time-step adaptation in active jobs.
 Sampling a narrow packet on a coarse grid can be inaccurate even when validation passes.
 
@@ -106,7 +115,7 @@ Library methods can panic on invalid dimensions. Public raw arrays can be misuse
 3. Reconcile ODE/operator interfaces and state ownership/error contracts.
 4. Redesign adaptive accepted-step handling and implement coupled implicit solves.
 5. Finish numerical-recipe placeholders only against concrete use cases and reference tests.
-6. Optimize repeated RHS allocations, Fourier split propagation and MD neighbor search when scale requires it.
+6. Optimize repeated RHS allocations, the legacy 1D Fourier split propagator and MD neighbor search when scale requires it; the nD split propagator already uses Fourier phases.
 7. Add durable result export and automated browser checks before expanding the product surface.
 
 This list is a proposed maintenance sequence, not a statement that those changes

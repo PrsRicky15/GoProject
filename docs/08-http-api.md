@@ -5,13 +5,17 @@
 
 ## Endpoints and transport
 
+The `nd-spectrum` calculation adds per-axis settings, ten n-dimensional potentials
+and optional density volumes. Its full schema and bounds are documented in the
+[multidimensional web API guide](15-web-multidimensional-potentials.md#http-request).
+
 Default origin: `http://127.0.0.1:8080`. Vite proxies the same `/api` paths.
 
 | Method / path | Response |
 | --- | --- |
 | `GET /api/health` | `{"engine":"go","status":"ok"}` |
 | `POST /api/plot` | Sampled expression grid |
-| `POST /api/simulations` | Diagnostics, charts, optional particle frames |
+| `POST /api/simulations` | Diagnostics, charts, optional particle frames or 3D density volume |
 | `GET /calculator/` | 307 redirect to `/#tools` |
 | `GET` / `HEAD` static paths | Files below configured `-dist` |
 | Other `/api/` path or unsupported API method | JSON 404 |
@@ -194,6 +198,13 @@ For the plot example use `/api/plot` instead. These endpoints return data, not
 saved jobs; requests do not persist settings or results on the server.
 
 ## Simulation response
+
+For `kind: "nd-spectrum"`, custom formulas use `potential: "custom"` and the
+string `nd.expression`, for example `"0.5*(x1^2+x2^2)+0.2*x1*x2"`.
+Coordinates are raw grid positions; preset strength and coordinate transformations
+are not applied. Invalid expressions or non-finite/out-of-range sampled values
+return 400. See the [custom-potential guide](15-web-multidimensional-potentials.md#enter-your-own-potential)
+for grammar, dimensionality, limits and required grid fields.
 
 ```text
 {

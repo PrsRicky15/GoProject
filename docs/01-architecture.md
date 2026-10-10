@@ -92,16 +92,20 @@ its input size is bounded and the context is checked after it completes.
 | Fluid force evaluation | O(P²) per step | P limited to 64; no neighbor list |
 | Particle playback | O(P) per frame | Render stored coordinates |
 
-Fourier Hamiltonian application uses FFTs, but the current split propagator uses
+The 1D Fourier Hamiltonian application uses FFTs, but its split propagator uses
 a dense kinetic eigensystem even for that basis. Selecting Fourier does not turn
 split propagation into an FFT split-step implementation.
+The separate nD split propagator uses FFT kinetic phases per axis; see the
+[multidimensional guide](14-multidimensional-quantum.md).
 
 Cartesian and GL3D Plotly bundles load separately on demand. They are still large;
 JSON serialization and browser rendering may dominate a small numerical run.
 
 ## Scientific scope
 
-Quantum and single-particle models are one-dimensional. The separate fluid is
+The browser supports 1D dynamics and 1D–4D energy-level calculations, with ten
+multidimensional model potentials. The Go library and `cmd/ndquantum` support n-dimensional Cartesian Hamiltonians,
+coupled potentials, iterative eigenstates and time-dependent propagation. The separate fluid is
 two-dimensional. A 3D expression surface or isosurface does not imply a 3D quantum
 solver. There are no electronic-structure methods, chemical atom types, molecular
 topology inputs, GPU kernels or trajectory database. Exact bounds are in the

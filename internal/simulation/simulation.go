@@ -9,28 +9,29 @@ import (
 )
 
 type Request struct {
-	Kind           string  `json:"kind"`
-	Basis          string  `json:"basis"`
-	Method         string  `json:"method"`
-	Potential      string  `json:"potential"`
-	Mass           float64 `json:"mass"`
-	Strength       float64 `json:"strength"`
-	Alpha          float64 `json:"alpha"`
-	Center         float64 `json:"center"`
-	HalfWidth      float64 `json:"halfWidth"`
-	Points         int     `json:"points"`
-	States         int     `json:"states"`
-	Dt             float64 `json:"dt"`
-	Steps          int     `json:"steps"`
-	X0             float64 `json:"x0"`
-	P0             float64 `json:"p0"`
-	Sigma          float64 `json:"sigma"`
-	DriveAmplitude float64 `json:"driveAmplitude"`
-	DriveFrequency float64 `json:"driveFrequency"`
-	Particles      int     `json:"particles"`
-	Box            float64 `json:"box"`
-	Temperature    float64 `json:"temperature"`
-	Seed           int     `json:"seed"`
+	ND             *NDRequest `json:"nd,omitempty"`
+	Kind           string     `json:"kind"`
+	Basis          string     `json:"basis"`
+	Method         string     `json:"method"`
+	Potential      string     `json:"potential"`
+	Mass           float64    `json:"mass"`
+	Strength       float64    `json:"strength"`
+	Alpha          float64    `json:"alpha"`
+	Center         float64    `json:"center"`
+	HalfWidth      float64    `json:"halfWidth"`
+	Points         int        `json:"points"`
+	States         int        `json:"states"`
+	Dt             float64    `json:"dt"`
+	Steps          int        `json:"steps"`
+	X0             float64    `json:"x0"`
+	P0             float64    `json:"p0"`
+	Sigma          float64    `json:"sigma"`
+	DriveAmplitude float64    `json:"driveAmplitude"`
+	DriveFrequency float64    `json:"driveFrequency"`
+	Particles      int        `json:"particles"`
+	Box            float64    `json:"box"`
+	Temperature    float64    `json:"temperature"`
+	Seed           int        `json:"seed"`
 }
 type Series struct {
 	Name string    `json:"name"`
@@ -38,13 +39,14 @@ type Series struct {
 	Y    []float64 `json:"y"`
 }
 type Chart struct {
-	Title  string      `json:"title"`
-	XLabel string      `json:"xLabel"`
-	YLabel string      `json:"yLabel"`
-	Series []Series    `json:"series,omitempty"`
-	X      []float64   `json:"x,omitempty"`
-	Y      []float64   `json:"y,omitempty"`
-	Z      [][]float64 `json:"z,omitempty"`
+	ValueLabel string      `json:"valueLabel,omitempty"`
+	Title      string      `json:"title"`
+	XLabel     string      `json:"xLabel"`
+	YLabel     string      `json:"yLabel"`
+	Series     []Series    `json:"series,omitempty"`
+	X          []float64   `json:"x,omitempty"`
+	Y          []float64   `json:"y,omitempty"`
+	Z          [][]float64 `json:"z,omitempty"`
 }
 type Metric struct {
 	Label string  `json:"label"`
@@ -56,19 +58,26 @@ type Frame struct {
 	Y    []float64 `json:"y"`
 }
 type Result struct {
-	Request Request  `json:"request"`
-	Title   string   `json:"title"`
-	Units   string   `json:"units"`
-	Metrics []Metric `json:"metrics"`
-	Charts  []Chart  `json:"charts"`
-	Notes   []string `json:"notes"`
-	Frames  []Frame  `json:"frames,omitempty"`
+	Volume  *DensityVolume `json:"volume,omitempty"`
+	Request Request        `json:"request"`
+	Title   string         `json:"title"`
+	Units   string         `json:"units"`
+	Metrics []Metric       `json:"metrics"`
+	Charts  []Chart        `json:"charts"`
+	Notes   []string       `json:"notes"`
+	Frames  []Frame        `json:"frames,omitempty"`
 }
 
 func bounded(v, min, max float64) bool {
 	return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= min && v <= max
 }
 func Validate(r Request) error {
+	if r.Kind == "nd-spectrum" {
+		return validateND(r)
+	}
+	if r.ND != nil {
+		return fmt.Errorf("multidimensional settings require the n-dimensional energy-level calculation")
+	}
 	if r.Kind == "md" {
 		if r.Method != "verlet" || r.Particles < 4 || r.Particles > 64 || !bounded(r.Box, 5, 30) || !bounded(r.Temperature, 0, 2) || r.Seed < 0 || r.Seed > 1000000 || !bounded(r.Dt, .00001, .01) || r.Steps < 1 || r.Steps > 2000 {
 			return fmt.Errorf("MD requires velocity-Verlet, 4–64 particles, box 5–30, temperature 0–2, seed 0–1,000,000, dt 0.00001–0.01, and 1–2,000 steps")
@@ -147,7 +156,9 @@ func Run(ctx context.Context, r Request) (*Result, error) {
 	}
 	var result *Result
 	var err error
-	if r.Kind == "spectrum" || r.Kind == "quantum" {
+	if r.Kind == "nd-spectrum" {
+		result, err = ndSpectrum(ctx, r)
+	} else if r.Kind == "spectrum" || r.Kind == "quantum" {
 		result, err = quantum(ctx, r)
 	} else if r.Kind == "md" {
 		result, err = molecularDynamics(ctx, r)
@@ -184,6 +195,15 @@ func Run(ctx context.Context, r Request) (*Result, error) {
 			for _, v := range a {
 				if !bounded(v, -math.MaxFloat64, math.MaxFloat64) {
 					return nil, fmt.Errorf("calculation diverged; reduce the step size")
+				}
+			}
+		}
+	}
+	if v := result.Volume; v != nil {
+		for _, a := range [][]float64{v.X, v.Y, v.Z, v.Values} {
+			for _, value := range a {
+				if !bounded(value, -math.MaxFloat64, math.MaxFloat64) {
+					return nil, fmt.Errorf("non-finite volume data")
 				}
 			}
 		}

@@ -4,6 +4,12 @@
 
 ## Entry points and routes
 
+`Calculations` now includes **N-dimensional states**, with `NDControls` for 2–4
+axes and ten potentials. `SimulationChart` switches grids between heatmap and
+surface; `DensityVolume` renders an isosurface for 3D/4D densities. The result
+decoder validates volume sizes, finite/nonnegative densities and labels. See
+[controls and interpretation](15-web-multidimensional-potentials.md#controls-and-plots).
+
 `index.html` loads `src/main.tsx`, which mounts React in `StrictMode`. `App.tsx`
 tracks `window.location.hash` and subscribes to `hashchange`:
 
