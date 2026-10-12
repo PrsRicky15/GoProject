@@ -2,9 +2,9 @@
 
 [Documentation index](README.md)
 
-This is a source-based snapshot finalized on 2026-10-08. It distinguishes observed
-defects from areas merely lacking validation. Documentation work has not silently
-changed the numerical methods described here.
+This is a source-based snapshot initially finalized on 2026-10-08, updated for
+implicit solver repairs on 2026-10-12. It distinguishes observed defects from
+areas merely lacking validation.
 
 ## Active, exercised paths
 
@@ -38,6 +38,9 @@ energy levels with ten models; see [web potentials](15-web-multidimensional-pote
 | Yoshida | Middle drift factors corrected; proper name and coefficient initialization on redefinition |
 | Störmer–Verlet | Previous-position initialization sign and repeat grid initialization corrected |
 | Fourier operations | FFT ordering/normalization and kinetic application aligned; planner/destructor lock added |
+| Implicit ODE methods | Euler, trapezoidal and midpoint scalar/grid methods repaired; predictor/corrector completed; full coupled Newton solves, damping, derivative callbacks, workspace/factor reuse and SDIRK2 added; see [ODE guide](05-ode-solvers.md#implicit-methods-completed-2026-10-12) |
+| Whole-vector propagation | Direct real/complex nonlinear APIs, matrix-free linear GMRES, and implicit midpoint adapters for static/time-dependent 1D/nD Hamiltonians; see [vector guide](16-vector-ode-and-hamiltonian-propagation.md) |
+| Explicit/adaptive vectors | All 13 fixed RK formulas and six embedded pairs support real/complex vectors, with fixed/adaptive 1D/nD Hamiltonian adapters; [guide](17-explicit-and-adaptive-vector-propagation.md). Library-only; old scalar adaptive implementations remain deprecated |
 
 ## Concrete remaining problems
 
@@ -49,13 +52,9 @@ energy levels with ten models; see [web potentials](15-web-multidimensional-pote
 | [derivativeOp.go](../OperatorAlgebra/derivativeOp.go) | Exponential interfaces omit error returns present on concrete DVR in-place methods | Concrete DVR type does not satisfy these legacy interfaces as written |
 | [exOperator.go](../ODESolver/exOperator.go) | Exponential interface also lacks concrete error-return signatures | Reconcile before generic use |
 | [sympleticMethods.go](../ODESolver/sympleticMethods.go) | `MDodeSolver` signatures differ from implemented methods | Current adapters use concrete solvers; old interface is not a working abstraction |
-| [adaptiveMethods.go](../ODESolver/adaptiveMethods.go) | Rejected steps can return unchanged state and nil error while changing hidden dt | Caller cannot track accepted time correctly; redesign acceptance/time contract |
+| [adaptiveMethods.go](../ODESolver/adaptiveMethods.go) | Deprecated scalar types can return unchanged state and nil error while changing hidden dt | Use the new `NewVectorAdaptiveRK`/`NewComplexAdaptiveRK` interval APIs instead |
 | Same adaptive file | Bogacki–Shampine accesses index 3 of a three-element `b1Coefs` slice | Runtime panic in that path |
 | Same adaptive file | `adaptiveRKBase` adds unscaled c fractions to time | Incorrect non-autonomous stage times; complete coefficient/time audit needed |
-| [odeFixPoint.go](../ODESolver/odeFixPoint.go) | Heun predictor/iteration/output paths rebind local slice variables | Intended updates do not reliably reach caller/work buffers |
-| Same fixed-point file | Midpoint copies initial state before allocating new buffers | First call after a size change loses the intended starting iterate |
-| [odeNewtonRapson.go](../ODESolver/odeNewtonRapson.go) | Heun predictor rebinding; componentwise Newton derivatives | Initialization problem and no general coupled Jacobian solve |
-| Same Newton file | Midpoint has `NextStepIm` but no complete standard scalar/grid interface | Not selectable as an `ODESolver` |
 | [potential.go](../gridData/potential.go) | Gaussian force is the energy derivative rather than its negative | Incorrect force convention for direct classical use |
 | Same potential file | SuperGaussian force sign; complex energy hardcodes order 2 | Inconsistent real/complex model; needs derivative and analytic-continuation tests |
 | [grid.go](../gridData/grid.go), [timegrid.go](../gridData/timegrid.go) | Input readers ignore parse/scanner errors and leave files open | Malformed input can produce unintended values; repeated reads leak handles |
@@ -69,12 +68,12 @@ Isolation of those paths is not a repair of the unused library code.
 
 ## Partial declarations and unverified methods
 
-- `PredictorCorrector`, `ChebyshevSecondKind`, `ChebyshevComplex`: declarations without algorithms.
+- `ChebyshevSecondKind`, `ChebyshevComplex`: declarations without algorithms.
 - `NumericalRecipies.Integration`: interface only; trapezoidal/Simpson implementations absent.
 - `NumericalRecipies/differentiation.go`, `Plots/basicPlot.go`, and `classical/moleulardyn.go`: package-only placeholders.
 - `classical.ModelSystem` / `SystemInfo`: old data holders, with unexported fields and no complete evolution API.
 - `InitialValueIntegrator`: interface with no concrete implementation in that old model path.
-- Several named third/fourth-order explicit methods have scalar steps but no grid steps; see the complete [solver table](05-ode-solvers.md).
+- Legacy adaptive scalar types remain unverified/deprecated; the new vector API supplies the six corresponding algorithms with tested coefficients and interval handling.
 - MultiGaussian forces, most non-web potential variants, complex scaling, and legacy adaptive coefficient tables need dedicated validation.
 
 The presence of complex-number support does not imply a working complex general
@@ -113,7 +112,7 @@ Library methods can panic on invalid dimensions. Public raw arrays can be misuse
 1. Repair potential force definitions and add genuine force-gradient tests.
 2. Make basis boundaries explicit; finish finite-difference stencils and convergence tests.
 3. Reconcile ODE/operator interfaces and state ownership/error contracts.
-4. Redesign adaptive accepted-step handling and implement coupled implicit solves.
+4. Migrate legacy adaptive callers to the new interval APIs; add preconditioning to linear GMRES and sparse/banded or Newton-Krylov solves for large nonlinear coupled systems.
 5. Finish numerical-recipe placeholders only against concrete use cases and reference tests.
 6. Optimize repeated RHS allocations, the legacy 1D Fourier split propagator and MD neighbor search when scale requires it; the nD split propagator already uses Fourier phases.
 7. Add durable result export and automated browser checks before expanding the product surface.

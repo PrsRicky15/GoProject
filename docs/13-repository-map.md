@@ -71,6 +71,11 @@ here so the paths match the files.
 | [nd_hamiltonian.go](../Quantum/nd_hamiltonian.go) | Cartesian tensor DVR/Fourier Hamiltonian, coupled/time-dependent potentials and bounded dense operations |
 | [nd_eigensolver.go](../Quantum/nd_eigensolver.go) | Restarted block Krylov/Rayleigh–Ritz low-energy solver, residual checks and cancellation |
 | [nd_propagation.go](../Quantum/nd_propagation.go) | Axis-wise Strang propagation with Fourier phases or one-axis DVR eigensystems |
+| [implicit_propagation.go](../Quantum/implicit_propagation.go) | Matrix-free complex midpoint adapters for 1D and nD Hamiltonians |
+| [rk_propagation.go](../Quantum/rk_propagation.go) | Whole-complex-vector fixed/adaptive RK adapters for static/time-dependent 1D/nD Hamiltonians |
+| [rk_tableau.go](../ODESolver/rk_tableau.go), [vector_rk.go](../ODESolver/vector_rk.go) | Catalog of 19 RK formulas, reusable real/complex engines and complete adaptive intervals |
+| [vector_rk_test.go](../ODESolver/vector_rk_test.go), [rk_example_test.go](../ODESolver/rk_example_test.go), [rk_propagation_test.go](../Quantum/rk_propagation_test.go) | Convergence, adaptive control, rollback, reuse, examples and Hamiltonian references |
+| [implicit_propagation_test.go](../Quantum/implicit_propagation_test.go) | Static superpositions, phase/norm checks and 4D time-dependent propagation |
 | [nd_hamiltonian_test.go](../Quantum/nd_hamiltonian_test.go) | Coupled/anisotropic/degenerate spectra, plane waves, propagation convergence and compatibility |
 | [nd_clustered_test.go](../Quantum/nd_clustered_test.go) | Localized 3D well spectrum compared with a full dense reference |
 | [hamiltonian_test.go](../Quantum/hamiltonian_test.go) | Operators, spectra, time dependence, aliasing and validation |
@@ -83,8 +88,14 @@ here so the paths match the files.
 | [differentialEqnSolver.go](../ODESolver/differentialEqnSolver.go) | ODE interface, shared constants, explicit scalar/grid methods |
 | [explicitGrid.go](../ODESolver/explicitGrid.go) | Generic full-vector RK stepping and completed methods |
 | [adaptiveMethods.go](../ODESolver/adaptiveMethods.go) | Experimental adaptive embedded RK implementations |
-| [odeFixPoint.go](../ODESolver/odeFixPoint.go) | Fixed-point implicit methods and predictor/corrector placeholder |
-| [odeNewtonRapson.go](../ODESolver/odeNewtonRapson.go) | Experimental Newton implicit methods |
+| [odeFixPoint.go](../ODESolver/odeFixPoint.go) | Complete Euler/trapezoidal/midpoint fixed-point methods and converged predictor/corrector |
+| [odeNewtonRapson.go](../ODESolver/odeNewtonRapson.go) | Euler/trapezoidal/midpoint Newton methods and two-stage SDIRK2 |
+| [implicit.go](../ODESolver/implicit.go) | Shared residual solve, options/diagnostics, damped modified Newton, coupled Jacobians, LU/diagonal solve and reusable buffers |
+| [implicit_test.go](../ODESolver/implicit_test.go) | Implicit convergence, coupled stiff systems, errors, allocations and benchmarks |
+| [vector_implicit.go](../ODESolver/vector_implicit.go) | Direct real/complex whole-vector nonlinear APIs reusing the implicit engine |
+| [complex_linear.go](../ODESolver/complex_linear.go) | Matrix-free linear complex implicit methods and restarted GMRES |
+| [vector_implicit_test.go](../ODESolver/vector_implicit_test.go) | Coupling, complex/nonlinear equations, noncommuting Hamiltonians, restarts and failure contracts |
+| [vector_example_test.go](../ODESolver/vector_example_test.go) | Executable vector-only usage examples |
 | [sympleticMethods.go](../ODESolver/sympleticMethods.go) | Störmer/velocity Verlet, leapfrog and Yoshida |
 | [exOperator.go](../ODESolver/exOperator.go) | Legacy exponential interface |
 | [completed_methods_test.go](../ODESolver/completed_methods_test.go) | Ralston/Nyström consistency and convergence |

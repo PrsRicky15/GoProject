@@ -4,6 +4,10 @@ For your restored `NDimGrid` and the new general Cartesian Hamiltonian, see the
 [multidimensional guide](../docs/14-multidimensional-quantum.md). It includes
 `NewNDimHamiltonian`, `NewNDimFourierHamiltonian`, `LowestStates`, and
 `NewNDimSplitPropagator`, with coupled potentials and runnable examples.
+For implicit whole-wavefunction propagation, `NewImplicitPropagator` (1D) and
+`NewNDimImplicitPropagator` (nD) use midpoint Hamiltonian products and restarted
+GMRES. Both handle static and time-dependent Hamiltonians without assembling a
+dense full Hamiltonian; see [vector propagation](../docs/16-vector-ode-and-hamiltonian-propagation.md).
 The following reference describes the existing **1D** API used by the web page.
 
 For full-project context, see the [documentation index](../docs/README.md),
@@ -90,6 +94,14 @@ and eigenvectors stored in columns at time zero. These dense operations are for
 small grids; they are unnecessary when only applying H to a state.
 
 ## Verification
+
+Whole-vector explicit and adaptive propagation is available through
+`NewRKPropagator` / `NewNDimRKPropagator` and `NewAdaptiveRKPropagator` /
+`NewNDimAdaptiveRKPropagator`. These accept the RK method constants in `ODESolver`
+and apply static or time-dependent H to the full wavefunction. See the
+[method catalog and usage guide](../docs/17-explicit-and-adaptive-vector-propagation.md).
+Explicit methods do not preserve norm exactly; adaptive tolerances control local
+component errors. Original implicit and split propagators remain available.
 
 Use Go 1.25.1 or newer, with a C compiler and FFTW 3 development files available
 for the existing FFTW dependency. From the repository root:

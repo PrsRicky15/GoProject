@@ -47,12 +47,15 @@ No committed CI workflow, coverage target or browser end-to-end suite is present
 | [exponential_test.go](../OperatorAlgebra/exponential_test.go) | DVR diagonalization preserves K; real/complex eigenvector exponential, inverse and aliasing behavior |
 | [hamiltonian_test.go](../Quantum/hamiltonian_test.go) | Matrix/application agreement, aliasing, harmonic spectrum, Fourier plane waves, time-dependent potential, snapshots and validation |
 | [completed_methods_test.go](../ODESolver/completed_methods_test.go) | Ralston 2/3 and Nyström 5 scalar/grid agreement and global convergence order |
+| [implicit_test.go](../ODESolver/implicit_test.go) | Eight implicit types, global order, coupled stiff references, analytic/numerical Jacobians, damping, factor reuse, failure atomicity, resizing, allocation tests and benchmarks |
+| [vector_implicit_test.go](../ODESolver/vector_implicit_test.go) | Vector-only callbacks, nonlinear complex states, all linear implicit methods, noncommuting time-dependent Hamiltonian, GMRES restarts and 2,048-entry allocation test |
+| [implicit_propagation_test.go](../Quantum/implicit_propagation_test.go) | Static DVR/Fourier phases and norm; 4D time-dependent Hamiltonian propagation, order and cancellation |
 | [symplectic_test.go](../ODESolver/symplectic_test.go) | Yoshida order/grid agreement/redefinition; Störmer–Verlet initial velocity and repeat initialization |
 | [lennard_jones_test.go](../classical/lennard_jones_test.go) | Seed repeatability, energy-gradient force agreement and dense-lattice rejection |
 | [simulation_test.go](../internal/simulation/simulation_test.go) | End-to-end numerical adapters, quantum/classical references, MD diagnostics, limits and cancellation |
 
 Tests are examples of verified properties. They do not cover all potentials,
-asymmetric DVR domains, all RK coefficients, implicit/adaptive methods, every
+asymmetric DVR domains, all RK coefficients, legacy adaptive methods, every
 parameter combination, long-time thermodynamic behavior or all failure paths.
 
 ## Analytic reference cases
@@ -127,6 +130,14 @@ particle play/pause. Verify 1D/2D plots as well as WebGL-based plots when changi
 shared `PlotCanvas`. Also inspect narrow layouts rather than relying on CSS alone.
 
 ## Reproducible scientific use
+
+The explicit/adaptive vector suite exercises all 19 RK formulas on coupled real
+and complex reference equations and checks all six embedded lower-order formulas.
+It also covers tolerance response, rejected steps, backward integration, exact
+reported endpoints, atomic failure, cancellation, limits, derivative reuse and
+zero allocations after warm-up. Hamiltonian tests cover static DVR/Fourier
+superpositions and all six adaptive pairs on a time-dependent 4D Fourier model.
+These are library tests; no new browser method selections were introduced.
 
 Record the complete request, code revision, runtime versions and relevant native
 library environment. For quantum results record basis, L, N, potential and state

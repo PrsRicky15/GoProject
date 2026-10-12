@@ -50,3 +50,26 @@ func (r *Ralston2order) NextStepOnGrid(x []float64, t float64) error {
 func (r *Nystrom5Explicit) NextStepOnGrid(x []float64, t float64) error {
 	return explicitGrid(r.timeFunc, x, t, r.deltaTime, [][]float64{{}, {1. / 3}, {4. / 25, 6. / 25}, {1. / 4, -3, 15. / 4}, {2. / 27, 10. / 9, -50. / 81, 8. / 81}, {2. / 25, 12. / 25, 2. / 15, 8. / 75}}, []float64{23. / 192, 0, 125. / 192, 0, -27. / 64, 125. / 192}, []float64{0, 1. / 3, 2. / 5, 1, 2. / 3, 4. / 5})
 }
+
+func legacyRKGrid(f gridData.TDPotentialOp, x []float64, t, dt float64, method RKMethod) error {
+	q, _ := rkTable(method)
+	return explicitGrid(f, x, t, dt, q.a, q.b, q.c)
+}
+func (r *Huens3Explicit) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.delTime, RKHeun3)
+}
+func (r *VDHouwenExplicit) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.delTime, RKWray3)
+}
+func (r *SSPRungeKutta3) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.delTime, RKSSP3)
+}
+func (r *RungeKutta3Explicit) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.delTime, RKKutta3)
+}
+func (r *RungeKutta38) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.deltaTime, RKThreeEighths4)
+}
+func (r *Ralston4Order) NextStepOnGrid(x []float64, t float64) error {
+	return legacyRKGrid(r.timeFunc, x, t, r.deltaTime, RKRalston4)
+}

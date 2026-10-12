@@ -4,6 +4,7 @@ These notes describe **QuantumMLD**, whose Go module is named `GoProject`.
 Prepared from the working source and finalized on **2026-10-08**, they cover the active app,
 numerical libraries, tests, configuration, and older experimental files.
 The n-dimensional web potential guide and related scope notes were updated on 2026-10-10.
+Implicit solver implementation, tests and status notes were updated on 2026-10-12.
 
 ## Contents and reading order
 
@@ -13,7 +14,7 @@ The n-dimensional web potential guide and related scope notes were updated on 20
 | [02 — Setup and running](02-setup-and-running.md) | Dependencies, WSL paths, execution, build and troubleshooting |
 | [03 — Grids and potentials](03-grids-and-potentials.md) | Grid conventions, FFT frequencies, potential formulas, units and input files |
 | [04 — Quantum mechanics](04-quantum.md) | DVR/Fourier operators, Hamiltonian API, eigenstates and time propagation |
-| [05 — ODE solvers](05-ode-solvers.md) | Method inventory, contracts, explicit RK and symplectic algorithms |
+| [05 — ODE solvers](05-ode-solvers.md) | Explicit, symplectic and implicit algorithms; Newton/SDIRK2 APIs, tolerances, benchmarks and limitations |
 | [06 — Classical mechanics and MD](06-classical-and-md.md) | Trajectories, Morse bonds, Lennard–Jones forces, integration and diagnostics |
 | [07 — Plotter and calculator](07-plotter-and-calculator.md) | Expression syntax, visualization modes, indexing and invalid samples |
 | [08 — HTTP API](08-http-api.md) | Endpoints, full fields, bounds, examples, response formats and errors |
@@ -24,6 +25,8 @@ The n-dimensional web potential guide and related scope notes were updated on 20
 | [13 — Repository map](13-repository-map.md) | Source-file responsibilities, tests, configuration and legacy inventory |
 | [14 — Multidimensional quantum calculations](14-multidimensional-quantum.md) | Restored NDimGrid, coupled Hamiltonians, iterative eigenstates, propagation and runnable examples |
 | [15 — Web multidimensional potentials](15-web-multidimensional-potentials.md) | Ten models, per-axis controls, normalized projections, isosurfaces and nD API bounds |
+| [16 — Vector ODEs and Hamiltonian propagation](16-vector-ode-and-hamiltonian-propagation.md) | Whole real/complex vectors, nonlinear coupling, matrix-free GMRES and implicit 1D/nD Hamiltonian propagation |
+| [17 — Explicit and adaptive vector propagation](17-explicit-and-adaptive-vector-propagation.md) | All 19 RK formulas, adaptive interval contracts, tolerances, performance and 1D/nD Hamiltonian adapters |
 
 For a first run, read 01 and 02, then the guide for your calculation. For numerical
 development, read 03–06, 10 and 11. For web development, read 07–09 and 12.

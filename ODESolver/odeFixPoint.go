@@ -1,262 +1,130 @@
 package EquationSolver
 
-import (
-	"GoProject/gridData"
-	"fmt"
-	"math"
-	"slices"
+import "GoProject/gridData"
 
-	"gonum.org/v1/gonum/blas/blas64"
-)
-
-// EulerImplicitFixPoint implements the basic Euler method
+// EulerImplicitFixPoint implements backward euler with fixed-point iteration.
+// Reuse one instance per integration; it owns mutable workspace.
 type EulerImplicitFixPoint struct {
-	TdFunc gridData.TDPotentialOp
-	DeltaT float64
-	fxt    []float64
-	xPre   []float64
-	xNew   []float64
-	diff   []float64
+	TdFunc  gridData.TDPotentialOp
+	DeltaT  float64
+	Options ImplicitOptions
+	work    implicitWorkspace
 }
 
-func (eImFP *EulerImplicitFixPoint) Name() string {
-	return "Euler Method"
+func (s *EulerImplicitFixPoint) Name() string { return "Backward Euler with fixed-point iteration" }
+func (s *EulerImplicitFixPoint) NewDefine(dt float64, f gridData.TDPotentialOp) *EulerImplicitFixPoint {
+	return &EulerImplicitFixPoint{TdFunc: f, DeltaT: dt}
 }
 
-func (eImFP *EulerImplicitFixPoint) NextStep(xt, t float64) (float64, error) {
-	xPre := xt
-
-	for iter := 0; iter < maxIter; iter++ {
-		fxt := eImFP.TdFunc.EvaluateAt(xPre, t+eImFP.DeltaT)
-		xNew := xt + eImFP.DeltaT*fxt
-
-		if math.Abs(xNew-xPre) <= tolerance {
-			return xNew, nil
-		}
-		xPre = xNew
-	}
-
-	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
+// ReDefine preserves configured options and reuses workspace. No matrix is cached across steps.
+func (s *EulerImplicitFixPoint) ReDefine(dt float64, f gridData.TDPotentialOp) {
+	s.TdFunc = f
+	s.DeltaT = dt
+}
+func (s *EulerImplicitFixPoint) Stats() ImplicitStats { return s.work.stats }
+func (s *EulerImplicitFixPoint) NextStep(x, t float64) (float64, error) {
+	return s.work.scalarStep(s.TdFunc, x, t, s.DeltaT, s.Options, backwardEuler, false)
+}
+func (s *EulerImplicitFixPoint) NextStepOnGrid(x []float64, t float64) error {
+	return s.work.step(s.TdFunc, x, t, s.DeltaT, s.Options, backwardEuler, false, false)
 }
 
-func (eImFP *EulerImplicitFixPoint) allocate(nPoints int) {
-	if nPoints != len(eImFP.fxt) ||
-		nPoints != len(eImFP.xNew) ||
-		nPoints != len(eImFP.xPre) ||
-		nPoints != len(eImFP.diff) {
-		eImFP.fxt = make([]float64, nPoints)
-		eImFP.xPre = make([]float64, nPoints)
-		eImFP.xNew = make([]float64, nPoints)
-		eImFP.diff = make([]float64, nPoints)
-	}
-}
+var _ ODESolver = (*EulerImplicitFixPoint)(nil)
 
-func (eImFP *EulerImplicitFixPoint) NextStepOnGrid(xt []float64, t float64) error {
-	nPoints := len(xt)
-	eImFP.allocate(nPoints)
-	eImFP.xPre = slices.Clone(xt)
-
-	for iter := 0; iter < maxIter; iter++ {
-		(eImFP.TdFunc).EvaluateOnRGridInPlace(eImFP.xPre, eImFP.fxt, t+eImFP.DeltaT)
-
-		for i := range eImFP.xNew {
-			eImFP.xNew[i] = xt[i] + eImFP.DeltaT*eImFP.fxt[i]
-			eImFP.diff[i] = eImFP.xNew[i] - eImFP.xPre[i]
-		}
-
-		err := blas64.Nrm2(blas64.Vector{N: nPoints, Data: eImFP.diff, Inc: 1})
-
-		if err <= tolerance {
-			copy(xt, eImFP.xNew)
-			return nil
-		}
-		eImFP.xPre = slices.Clone(eImFP.xNew)
-	}
-	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
-}
-
-// HeunsImplicitFixPoint implements the basic Euler method
+// HeunsImplicitFixPoint implements implicit trapezoidal rule with fixed-point iteration.
+// Reuse one instance per integration; it owns mutable workspace.
 type HeunsImplicitFixPoint struct {
-	TdFunc    gridData.TDPotentialOp
-	DeltaT    float64
-	predictor []float64
-	corrector []float64
-	fxt       []float64
-	jacobian  []float64
-	diff      []float64
+	TdFunc  gridData.TDPotentialOp
+	DeltaT  float64
+	Options ImplicitOptions
+	work    implicitWorkspace
 }
 
-func (hIm *HeunsImplicitFixPoint) Name() string {
-	return "Heun's Method (Improved Euler method)"
+func (s *HeunsImplicitFixPoint) Name() string {
+	return "Implicit trapezoidal rule with fixed-point iteration"
+}
+func (s *HeunsImplicitFixPoint) NewDefine(dt float64, f gridData.TDPotentialOp) *HeunsImplicitFixPoint {
+	return &HeunsImplicitFixPoint{TdFunc: f, DeltaT: dt}
 }
 
-func (hIm *HeunsImplicitFixPoint) PredictIni(xt, fxt, xP []float64) {
-	nPoints := len(xP)
-	xP = slices.Clone(xt)
-	vecFxt := blas64.Vector{N: nPoints, Data: fxt, Inc: 1}
-	xNew := blas64.Vector{N: nPoints, Data: xP, Inc: 1}
-	blas64.Axpy(hIm.DeltaT, vecFxt, xNew)
+// ReDefine preserves configured options and reuses workspace. No matrix is cached across steps.
+func (s *HeunsImplicitFixPoint) ReDefine(dt float64, f gridData.TDPotentialOp) {
+	s.TdFunc = f
+	s.DeltaT = dt
+}
+func (s *HeunsImplicitFixPoint) Stats() ImplicitStats { return s.work.stats }
+func (s *HeunsImplicitFixPoint) NextStep(x, t float64) (float64, error) {
+	return s.work.scalarStep(s.TdFunc, x, t, s.DeltaT, s.Options, trapezoidal, false)
+}
+func (s *HeunsImplicitFixPoint) NextStepOnGrid(x []float64, t float64) error {
+	return s.work.step(s.TdFunc, x, t, s.DeltaT, s.Options, trapezoidal, false, false)
 }
 
-func (hIm *HeunsImplicitFixPoint) NextStep(xt, t float64) (float64, error) {
-	fxt := (hIm.TdFunc).EvaluateAt(xt, t)
-	predictor := xt + hIm.DeltaT*fxt
-	corrector := predictor
+var _ ODESolver = (*HeunsImplicitFixPoint)(nil)
 
-	for i := 0; i < maxIter; i++ {
-		trapezoid := fxt + (hIm.TdFunc).EvaluateAt(corrector, t+hIm.DeltaT)
-		correctorNew := xt + 0.5*hIm.DeltaT*trapezoid
-
-		var err float64
-		if math.Abs(correctorNew) > 1e-10 {
-			err = math.Abs(correctorNew-corrector) / math.Abs(correctorNew)
-		} else {
-			err = math.Abs(correctorNew - corrector)
-		}
-
-		if err < tolerance {
-			return correctorNew, nil
-		}
-
-		corrector = correctorNew
+// PredictIni writes the explicit Euler predictor into the caller's buffer.
+func (s *HeunsImplicitFixPoint) PredictIni(x, f, predictor []float64) {
+	for i := range predictor {
+		predictor[i] = x[i] + s.DeltaT*f[i]
 	}
-	return xt, fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
 }
 
-func (hIm *HeunsImplicitFixPoint) allocate(nPoints int) {
-
-	if nPoints != len(hIm.corrector) ||
-		nPoints != len(hIm.predictor) ||
-		nPoints != len(hIm.fxt) ||
-		nPoints != len(hIm.diff) {
-
-		hIm.corrector = make([]float64, nPoints)
-		hIm.predictor = make([]float64, nPoints)
-		hIm.fxt = make([]float64, nPoints)
-		hIm.diff = make([]float64, nPoints)
-	}
-
-}
-
-func (hIm *HeunsImplicitFixPoint) iterate(xt, fxt, predictCorrect []float64, t float64) float64 {
-	nPoints := len(xt)
-
-	for i := range predictCorrect {
-		hIm.corrector[i] = fxt[i] + (hIm.TdFunc).EvaluateAt(predictCorrect[i], t+hIm.DeltaT)
-	}
-	trapezoidal := blas64.Vector{N: nPoints, Data: hIm.corrector, Inc: 1}
-
-	hIm.diff = slices.Clone(xt)
-	xtNew := blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1}
-	blas64.Axpy(0.5*hIm.DeltaT, trapezoidal, xtNew)
-
-	hIm.corrector = slices.Clone(hIm.diff)
-
-	for i := range hIm.corrector {
-		hIm.diff[i] -= predictCorrect[i]
-	}
-
-	predictCorrect = slices.Clone(hIm.corrector)
-
-	diffVec := blas64.Vector{N: nPoints, Data: hIm.diff, Inc: 1}
-	correct := blas64.Vector{N: nPoints, Data: predictCorrect, Inc: 1}
-
-	return blas64.Nrm2(diffVec) / blas64.Nrm2(correct)
-}
-
-func (hIm *HeunsImplicitFixPoint) NextStepOnGrid(xt []float64, t float64) error {
-	nPoints := len(xt)
-	hIm.allocate(nPoints)
-	(hIm.TdFunc).EvaluateOnRGridInPlace(xt, hIm.fxt, t)
-
-	hIm.PredictIni(xt, hIm.fxt, hIm.predictor)
-
-	var err float64
-	for i := 0; i < maxIter; i++ {
-		err = hIm.iterate(xt, hIm.fxt, hIm.predictor, t)
-		if err < tolerance {
-			xt = slices.Clone(hIm.predictor)
-			return nil
-		}
-	}
-	return fmt.Errorf("implicit step did not converge after %d iterations", maxIter)
-}
-
+// MidPointFixPoint implements implicit midpoint with fixed-point iteration.
+// Reuse one instance per integration; it owns mutable workspace.
 type MidPointFixPoint struct {
-	TdFunc gridData.TDPotentialOp
-	DeltaT float64
-	xMid   []float64
-	xPre   []float64
-	fxt    []float64
+	TdFunc  gridData.TDPotentialOp
+	DeltaT  float64
+	Options ImplicitOptions
+	work    implicitWorkspace
 }
 
-func (mIm *MidPointFixPoint) Name() string {
-	return "MidPoint Implicit with Fix-Point Method"
+func (s *MidPointFixPoint) Name() string { return "Implicit midpoint with fixed-point iteration" }
+func (s *MidPointFixPoint) NewDefine(dt float64, f gridData.TDPotentialOp) *MidPointFixPoint {
+	return &MidPointFixPoint{TdFunc: f, DeltaT: dt}
 }
 
-func (mIm *MidPointFixPoint) NextStep(xt, t float64) (float64, error) {
-	tMid := t + mIm.DeltaT/2
-	xPre := xt
-	var xNext float64
-	for iter := 0; iter < maxIter; iter++ {
-		xMid := 0.5 * (xt + xPre)
-		funcMid := mIm.TdFunc.EvaluateAt(xMid, tMid)
-		xNext = xt + mIm.DeltaT*funcMid
-
-		if math.Abs(xNext-xPre) < tolerance {
-			return xNext, nil
-		}
-		xPre = xNext
-	}
-	return xt, fmt.Errorf("implicit fix point step timed out! Maximum Iterations: %d", maxIter)
+// ReDefine preserves configured options and reuses workspace. No matrix is cached across steps.
+func (s *MidPointFixPoint) ReDefine(dt float64, f gridData.TDPotentialOp) {
+	s.TdFunc = f
+	s.DeltaT = dt
+}
+func (s *MidPointFixPoint) Stats() ImplicitStats { return s.work.stats }
+func (s *MidPointFixPoint) NextStep(x, t float64) (float64, error) {
+	return s.work.scalarStep(s.TdFunc, x, t, s.DeltaT, s.Options, implicitMidpoint, false)
+}
+func (s *MidPointFixPoint) NextStepOnGrid(x []float64, t float64) error {
+	return s.work.step(s.TdFunc, x, t, s.DeltaT, s.Options, implicitMidpoint, false, false)
 }
 
-func (mIm *MidPointFixPoint) NextStepOnGrid(xt []float64, t float64) error {
-	nPoints := len(xt)
+var _ ODESolver = (*MidPointFixPoint)(nil)
 
-	tMid := t + mIm.DeltaT/2
-	copy(mIm.xPre, xt)
-
-	if nPoints != len(mIm.xMid) ||
-		nPoints != len(mIm.fxt) ||
-		nPoints != len(mIm.xPre) {
-
-		mIm.xPre = make([]float64, nPoints)
-		mIm.xMid = make([]float64, nPoints)
-		mIm.fxt = make([]float64, nPoints)
-	}
-
-	for iter := 0; iter < maxIter; iter++ {
-
-		for i := range xt {
-			mIm.xMid[i] = 0.5 * (xt[i] + mIm.xPre[i])
-		}
-
-		mIm.TdFunc.EvaluateOnRGridInPlace(mIm.xMid, mIm.fxt, tMid)
-
-		for i := range xt {
-			mIm.xMid[i] = xt[i] + mIm.DeltaT*mIm.fxt[i]
-			mIm.fxt[i] = mIm.xMid[i] - mIm.xPre[i]
-		}
-
-		errDiff := blas64.Vector{
-			N:    nPoints,
-			Data: mIm.fxt,
-			Inc:  1,
-		}
-
-		norm := blas64.Nrm2(errDiff)
-		if math.Abs(norm) < tolerance {
-			copy(xt, mIm.xMid)
-			return nil
-		}
-		copy(mIm.xPre, mIm.xMid)
-	}
-	return fmt.Errorf("implicit fix point step timed out! Maximum Iterations: %d", maxIter)
-}
-
-// PredictorCorrector implements the basic Euler method
+// PredictorCorrector implements euler predictor with converged trapezoidal corrector.
+// Reuse one instance per integration; it owns mutable workspace.
 type PredictorCorrector struct {
-	TdFunc gridData.TDPotentialOp
-	DeltaT float64
+	TdFunc  gridData.TDPotentialOp
+	DeltaT  float64
+	Options ImplicitOptions
+	work    implicitWorkspace
 }
+
+func (s *PredictorCorrector) Name() string {
+	return "Euler predictor with converged trapezoidal corrector"
+}
+func (s *PredictorCorrector) NewDefine(dt float64, f gridData.TDPotentialOp) *PredictorCorrector {
+	return &PredictorCorrector{TdFunc: f, DeltaT: dt}
+}
+
+// ReDefine preserves configured options and reuses workspace. No matrix is cached across steps.
+func (s *PredictorCorrector) ReDefine(dt float64, f gridData.TDPotentialOp) {
+	s.TdFunc = f
+	s.DeltaT = dt
+}
+func (s *PredictorCorrector) Stats() ImplicitStats { return s.work.stats }
+func (s *PredictorCorrector) NextStep(x, t float64) (float64, error) {
+	return s.work.scalarStep(s.TdFunc, x, t, s.DeltaT, s.Options, trapezoidal, false)
+}
+func (s *PredictorCorrector) NextStepOnGrid(x []float64, t float64) error {
+	return s.work.step(s.TdFunc, x, t, s.DeltaT, s.Options, trapezoidal, false, false)
+}
+
+var _ ODESolver = (*PredictorCorrector)(nil)

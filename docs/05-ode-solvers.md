@@ -36,18 +36,20 @@ reuse mutable buffers and should belong to one integration at a time.
 | `MidPointExplicit` | 2 | Present | Present | No |
 | `Ralston2order` | 2 | Present | Completed | No; convergence test exists |
 | `Ralston3Order` | 3 | Corrected | Completed | Quantum |
-| `Huens3Explicit` | 3 | Present | Missing | No |
-| `VDHouwenExplicit` | 3 | Present | Missing | No |
-| `SSPRungeKutta3` | 3 | Present | Missing | No |
-| `RungeKutta3Explicit` | 3 | Present | Missing | No |
+| `Huens3Explicit` | 3 | Present | Completed | No |
+| `VDHouwenExplicit` | 3 | Present | Completed | No |
+| `SSPRungeKutta3` | 3 | Present | Completed | No |
+| `RungeKutta3Explicit` | 3 | Present | Completed | No |
 | `RungeKutta4Explicit` | 4 | Present | Present | Quantum |
-| `RungeKutta38` | 4 | Present | Missing | No |
-| `Ralston4Order` | 4 | Present | Missing | No |
+| `RungeKutta38` | 4 | Present | Completed | No |
+| `Ralston4Order` | 4 | Present | Completed | No |
 | `Nystrom5Explicit` | 5 | Corrected | Completed | Quantum |
 
-Scalar-only types do not satisfy `ODESolver`, because its grid method is required.
-The order column reflects the named algorithm, not a blanket certification of
-every legacy coefficient table.
+All listed fixed-step types now satisfy `ODESolver`. The order column reflects
+the named algorithm, not a blanket certification of every legacy scalar table.
+The new `NewVectorRK` and `NewComplexRK` constructors cover all 13 fixed formulas
+and six embedded pairs with a shared, tested whole-vector engine and reusable
+workspace. See [the explicit/adaptive guide](17-explicit-and-adaptive-vector-propagation.md).
 
 ## Explicit RK equations
 
@@ -126,7 +128,7 @@ integrators. The web adapter selects concrete methods; it does not depend on tha
 interface. These scalar-force grid methods represent independent coordinates,
 not arbitrary pairwise particle forces. The LJ model has its own coupled force loop.
 
-## Adaptive methods: experimental
+## Legacy adaptive methods: deprecated
 
 `adaptiveMethods.go` contains `HuensEuler`, `FehlbergRK12`, `BogackiShampine`,
 `RKFelberg`, `CashKarp` and `DormandPrince`. They are not exposed in the current UI.
@@ -138,22 +140,183 @@ Concrete issues include an out-of-range `b1Coefs[3]` access in Bogacki–Shampin
 unscaled stage-time fractions in `adaptiveRKBase`. Embedded weights also need a
 full audit. Do not treat the existence of these types as a usable adaptive solver.
 
-A future API should explicitly return accepted state, accepted time, error estimate,
-and suggested next step, or internally integrate a complete requested interval.
-It also needs rejection limits, min/max step bounds and coupled-vector error norms.
+Use `NewVectorAdaptiveRK` or `NewComplexAdaptiveRK` instead. These new APIs cover
+all six pairs, integrate a complete interval, return committed time and step
+counts, and support min/max step bounds, attempt limits and coupled-vector error
+control. Failure leaves the caller's vector unchanged. The original scalar
+implementations remain available with their known defects; they are not the
+implementation used by the new API. See [usage and guarantees](17-explicit-and-adaptive-vector-propagation.md).
 
-## Implicit methods: library experiments
+## Implicit methods (completed 2026-10-12)
 
-`odeFixPoint.go` includes Euler, Heun and midpoint fixed-point iterations.
-`odeNewtonRapson.go` includes Euler/Heun Newton iterations and a scalar midpoint
-method named `NextStepIm`. `PredictorCorrector` is only a struct declaration.
+For direct whole-vector callbacks, complex states, and matrix-free Hamiltonian
+propagation, see [the vector ODE guide](16-vector-ode-and-hamiltonian-propagation.md).
+These APIs extend all existing solvers without removing them.
 
-The shared constants are `maxIter=20`, `tolerance=1e-7`, finite-difference
-`delta=1e-6`, and `adaptiveTolerance=1e-8`; no page exposes tolerance controls.
-Several Heun grid helpers replace local slice variables rather than copying into
-the caller's buffer. Newton grid paths use componentwise derivatives rather than
-the full coupled Jacobian. They cannot be assumed to solve a coupled Schrödinger
-system correctly. Midpoint interfaces are also inconsistent.
+All methods below implement both scalar `NextStep` and coupled-vector
+`NextStepOnGrid`. The latter commits to the caller's buffer only after every
+stage converges. Errors leave the input unchanged. `MidPointNewton.NextStepIm`
+remains an alias for compatibility. Existing `TdFunc` and `DeltaT` fields remain;
+all types also provide `NewDefine`, `ReDefine`, `Options`, `Stats` and `Name`.
+`ReDefine` preserves options, including derivative callbacks; update those too
+when replacing a model with different derivatives.
 
-These files need contract and convergence work before promotion to active choices.
-More details and repair priorities are in [status](11-status-and-limitations.md).
+| Types | Order | Discrete equation / behavior |
+| --- | --- | --- |
+| `EulerImplicitFixPoint`, `EulerImplicitNewton` | 1 | `y = x + h*f(y,t+h)` |
+| `HeunsImplicitFixPoint`, `HeunsImplicitNewton` | 2 | `y = x + h/2*(f(x,t)+f(y,t+h))`; implicit trapezoidal rule |
+| `MidPointFixPoint`, `MidPointNewton` | 2 | `y = x + h*f((x+y)/2,t+h/2)` |
+| `PredictorCorrector` | 2 | Euler prediction followed by trapezoidal fixed-point correction **to convergence**, not a single explicit correction |
+| `SDIRK2` | 2 | Two-stage, stiffly accurate, L-stable method; damped modified Newton in each stage |
+
+Fixed-point iteration still requires a contractive iteration map, which can fail
+at a large time step on stiff equations even when the underlying implicit method
+is stable. Use Newton for stiff systems. Backward Euler and SDIRK2 damp very fast
+decaying modes; midpoint/trapezoidal are A-stable but do not strongly damp those
+modes. Midpoint preserves quadratic invariants up to nonlinear-solve error;
+SDIRK2 is intended for dissipative stiff equations, not unitary quantum dynamics.
+These are Go library methods; the web method menus have not changed.
+
+### Shared nonlinear solver
+
+[implicit.go](../ODESolver/implicit.go) solves the stage residual
+
+```text
+R(y) = y - base - coefficient*f(z,time)
+z    = (1-theta)*x + theta*y
+M    = I - coefficient*theta*Jf(z,time)
+M * correction = R(y)
+yTrial = y - damping*correction
+```
+
+For a vector RHS the default finite-difference Jacobian perturbs each component
+and evaluates the **whole vector**, so off-diagonal coupling is retained. Forward
+differences use `sqrt(machine epsilon)*max(1,abs(z[j]))`, with the actual
+representable increment used as denominator. Scalars also use scaled differences
+unless a derivative is supplied. Finite differences assume a smooth RHS; for
+badly scaled or restricted-domain models, supplying derivatives is preferable.
+
+Newton solves use pivoted LU, never an explicit matrix inverse. The factors are
+reused within a stage for up to four corrections by default, with earlier refresh
+when residual reduction is poor. A backtracking search halves the correction
+up to twelve times. If a stale Jacobian cannot produce an improving trial, the
+solver retries with a fresh Jacobian. Singular/ill-conditioned solves, invalid
+values, exhausted iterations and failed searches return errors.
+
+Reuse of matrix data is a standard modified-Newton efficiency strategy; see
+[SUNDIALS CVODE](https://computing.llnl.gov/projects/sundials/cvode) and its
+[Jacobian reuse discussion](https://sundials.readthedocs.io/en/v6.6.1/cvode/Usage/index.html).
+This implementation refreshes at each new step and SDIRK stage; it does **not**
+assume the model or step size remains constant across calls.
+
+### Configuration and derivative contracts
+
+A complete, tested scalar example is in
+[implicit_example_test.go](../ODESolver/implicit_example_test.go); run it with
+`go test ./ODESolver -run ExampleEulerImplicitNewton -v`.
+
+```go
+solver := &EquationSolver.SDIRK2{
+    TdFunc: rhs, // implements gridData.TDPotentialOp
+    DeltaT: 0.01,
+    Options: EquationSolver.ImplicitOptions{
+        AbsoluteTolerance: 1e-10,
+        RelativeTolerance: 1e-8,
+        MaxIterations: 30,
+        JacobianRefresh: 4,
+    },
+}
+if err := solver.NextStepOnGrid(state, time); err != nil {
+    // state and caller time are unchanged; retry with a smaller DeltaT or stop.
+    return err
+}
+time += solver.DeltaT
+stats := solver.Stats()
+_ = stats // iterations, RHS calls, Jacobians, factorizations, backtracks, residual
+```
+
+Zero option values select the defaults shown. `JacobianRefresh: 1` recomputes the
+Jacobian on every correction (full Newton). Convergence requires
+
+```text
+max_i |R_i| / (AbsoluteTolerance + RelativeTolerance*|xInitial_i|) <= 1.
+```
+
+The scale is fixed over the whole step, including both SDIRK stages. These are
+nonlinear residual tolerances, **not** an estimate or guarantee of time-integration
+error. Reduce `DeltaT` separately to check temporal convergence. There is no
+automatic step-size adaptation. Zero dt is a validated no-op; negative finite dt
+is allowed. Empty/non-finite states and non-advancing nonzero time steps fail.
+
+Optional callbacks:
+
+- `Options.Derivative func(x,t float64) float64`: scalar RHS derivative, used by
+  `NextStep` only. Vector Jacobian callbacks are ignored by scalar steps.
+- `Options.Jacobian func(x []float64,t float64,j []float64) error`: fill row-major
+  `j[i*n+j] = df_i/dx_j` for a grid call. Supply the RHS Jacobian, not the Newton
+  matrix. The destination is cleared first, so known zero entries can be omitted.
+- `Options.DiagonalJacobian func(x []float64,t float64,d []float64) error`: fill
+  only `df_i/dx_i` **when equations are actually independent**. This explicitly
+  selects an O(n) diagonal solve and bypasses dense storage. It is incorrect for
+  a coupled Hamiltonian or coupled particle equations. Supply either full or
+  diagonal callbacks, not both.
+
+Callbacks must treat inputs as read-only, write their outputs, and not retain
+slices. Fixed-point methods do not use derivative callbacks. One solver instance
+owns mutable reusable buffers: use it sequentially, do not share concurrently or
+copy it after use. Buffer resizing is supported. Repeated fixed-size diagonal
+steps do not allocate in the solver after initialization; RHS callbacks may still
+allocate. Dense LU uses O(n²) memory and O(n³) factorization work; this path is
+bounded to **1,024 components**. Large linear complex equations can now use
+`ComplexLinearImplicit` and the Hamiltonian adapters described in the
+[vector guide](16-vector-ode-and-hamiltonian-propagation.md). Large nonlinear
+systems still need a sparse/banded or Newton-Krylov extension; preconditioning
+is not yet implemented in the new linear GMRES path.
+
+### SDIRK2 equations and stability
+
+With `g = 1 - 1/sqrt(2)`:
+
+```text
+Y1 = x + h*g*f(Y1,t+g*h)
+Y2 = x + h*(1-g)*f(Y1,t+g*h) + h*g*f(Y2,t+h)
+xNext = Y2
+
+ c | A
+ g | g     0
+ 1 | 1-g   g
+---+----------
+ b | 1-g   g
+```
+
+This is the two-stage second-order L-stable SDIRK formula associated with
+[Alexander (1977)](https://epubs.siam.org/doi/10.1137/0714068).
+For `x'=lambda*x`, its stability function is
+`R(z)=(1+(1-2*g)*z)/(1-g*z)^2`, `z=h*lambda`; it tends to zero as the magnitude
+of a negative real z grows. Both stages solve n-dimensional systems, rather than
+one coupled 2n-dimensional stage system. Failure in stage two still leaves the
+original caller state untouched.
+
+### Verification and performance
+
+[implicit_test.go](../ODESolver/implicit_test.go) verifies all eight public types,
+first/second-order convergence on a non-autonomous equation, scalar/grid agreement,
+off-diagonal stiff coupling against analytical stability functions, supplied and
+finite-difference Jacobians, damping, factor reuse, stiff decay, singular systems,
+callback errors, atomic failure, zero solutions, backward steps, buffer resizing,
+legacy aliases and the no-allocation diagonal path.
+
+Run from the repository root in the configured Go/FFTW environment:
+
+```bash
+go test ./ODESolver
+go test -race ./ODESolver
+go test ./ODESolver -run '^$' -bench BenchmarkImplicitNewton -benchmem
+```
+
+On the current WSL machine, a 64-component **independent linear** model measured
+about 56.7 µs/step with a numerical dense Jacobian, 41.2 µs with an analytic dense
+Jacobian, and 1.67 µs with the analytic diagonal path. Dense paths used 72 bytes /
+3 allocations per step; diagonal used zero. This compares configurations of the
+new solver, not a general speedup over the old implementation. The diagonal result
+cannot be extrapolated to coupled equations or an expensive RHS.

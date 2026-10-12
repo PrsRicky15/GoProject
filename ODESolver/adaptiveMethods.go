@@ -5,6 +5,7 @@ import (
 	"math"
 )
 
+// Deprecated: use NewVectorAdaptiveRK with RKHeunEuler21, including for length-one states.
 type HuensEuler struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
@@ -51,6 +52,7 @@ func (HE *HuensEuler) NextStep(xt, t float64) (float64, error) {
 	return xt, nil
 }
 
+// Deprecated: use NewVectorAdaptiveRK with RKFehlberg21 for explicit accepted-time handling.
 type FehlbergRK12 struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
@@ -107,6 +109,7 @@ func (FRK12 *FehlbergRK12) NextStep(xt, t float64) (float64, error) {
 	return xt, nil
 }
 
+// Deprecated: use NewVectorAdaptiveRK with RKBogackiShampine32; this legacy path has known defects.
 type BogackiShampine struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64
@@ -222,6 +225,7 @@ func (ark *adaptiveRKBase) NextStep(xt, t float64) (float64, error) {
 }
 
 // RKFelberg - Runge-Kutta-Fehlberg method
+// Deprecated: use NewVectorAdaptiveRK with RKFehlberg54; legacy stage times are unreliable.
 type RKFelberg struct {
 	adaptiveRKBase
 }
@@ -249,6 +253,7 @@ func (RKF *RKFelberg) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *RKFe
 }
 
 // CashKarp - Cash-Karp method
+// Deprecated: use NewVectorAdaptiveRK with RKCashKarp54; legacy stage times are unreliable.
 type CashKarp struct {
 	adaptiveRKBase
 }
@@ -275,6 +280,7 @@ func (CK *CashKarp) NewDefine(dt float64, tdFunc gridData.TDPotentialOp) *CashKa
 	}
 }
 
+// Deprecated: use NewVectorAdaptiveRK with RKDormandPrince54 for validated coefficients and time handling.
 type DormandPrince struct {
 	timeFunc  gridData.TDPotentialOp
 	deltaTime float64

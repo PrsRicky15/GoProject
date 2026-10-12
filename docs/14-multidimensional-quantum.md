@@ -223,6 +223,12 @@ cancel. A zero state has undefined (NaN) energy.
 
 ## Time dependence and propagation
 
+Alongside the split propagator below, `NewNDimImplicitPropagator(h, options)` now
+advances the whole complex wavefunction using implicit midpoint and matrix-free
+GMRES. It handles both static and time-dependent Hamiltonians. See
+[the vector propagation guide](16-vector-ode-and-hamiltonian-propagation.md)
+for its API, accuracy, norm behavior and solver limits.
+
 `ApplyHReal/ApplyHComplex` evaluate at zero; their `At` variants take time as the
 last argument. They support overlapping input/output slices and can be used as
 the RHS in coupled ODE solvers.
