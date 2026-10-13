@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { decodeSimulation, simulationDefaults, ndAxes } from './simulation';
+import { decodeSimulation, simulationDefaults, ndAxes, RK_METHODS, ADAPTIVE_METHODS, IMPLICIT_METHODS, isAdaptiveMethod, isImplicitMethod } from './simulation';
 
 describe('calculation response validation', () => {
+ test('offers the complete vector method catalog with correct controls', () => {
+  expect(RK_METHODS).toHaveLength(13); expect(ADAPTIVE_METHODS).toHaveLength(6); expect(IMPLICIT_METHODS).toHaveLength(4);
+  expect(new Set([...RK_METHODS, ...ADAPTIVE_METHODS, ...IMPLICIT_METHODS].map(([id]) => id)).size).toBe(23);
+  for (const [id] of ADAPTIVE_METHODS) { expect(isAdaptiveMethod(id)).toBe(true); expect(isImplicitMethod(id)).toBe(false); }
+  for (const [id] of IMPLICIT_METHODS) { expect(isImplicitMethod(id)).toBe(true); expect(isAdaptiveMethod(id)).toBe(false); }
+  for (const [id] of RK_METHODS) { expect(isImplicitMethod(id)).toBe(false); expect(isAdaptiveMethod(id)).toBe(false); }
+  const defaults = simulationDefaults('quantum'); expect(defaults.absoluteTolerance).toBe(1e-9); expect(defaults.relativeTolerance).toBe(1e-7);
+ });
  const request = simulationDefaults('quantum');
  const response = { title: 'Quantum dynamics', units: 'Atomic units', metrics: [{ label: 'Norm', value: 1 }], notes: [], charts: [{ title: 'Density', xLabel: 'x', yLabel: 't', x: [0, 1], y: [0], z: [[1, 0]] }] };
  test('retains density orientation and the submitted settings', () => {

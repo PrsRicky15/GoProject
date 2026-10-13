@@ -3,8 +3,34 @@
 [Index](README.md) · [Implicit vector solvers](16-vector-ode-and-hamiltonian-propagation.md)
 
 These Go library APIs extend the existing solvers. Original scalar APIs, implicit
-solvers, split operators and n-dimensional grids remain available. The browser's
-solver menu has not changed; these additions are currently library-only.
+solvers, split operators and n-dimensional grids remain available. The browser
+now exposes all 13 fixed RK methods, six adaptive pairs and four implicit methods
+for quantum, classical and bond dynamics. Spatial wave-packet dynamics is still
+1D in the browser; nD time propagation remains a Go library capability.
+
+## Running from the webpage
+
+Open `/#calculations`, choose **Quantum dynamics**, **Classical dynamics**, or
+**Bond vibration**, then choose a propagator from its fixed, adaptive or implicit
+group. Adaptive and implicit choices show absolute/relative tolerance controls.
+For adaptive methods, `dt` is an output interval and maximum internal step, and
+`steps` counts those intervals. Final time is always `dt*steps`. Results show RHS
+evaluations and accepted/rejected solver steps, as well as physical diagnostics.
+Classical and bond methods advance the complete `[position, velocity]` vector.
+Quantum methods advance the full complex wavefunction directly. The web path
+uses the new vector engines, never the deprecated scalar adaptive implementations.
+
+The API accepts `absoluteTolerance` and `relativeTolerance` in `[1e-12,1e-3]`.
+Omitted or zero values select `1e-9` and `1e-7`, respectively. Implicit quantum
+methods use matrix-free GMRES for all four formulas; classical implicit methods
+use coupled nonlinear Newton solves. The webserver retains its ten-second job
+timeout and limits cumulative RHS evaluations across output intervals. Fixed
+explicit quantum steps also have a spectral admission bound. Tight tolerances
+or difficult models can exhaust the work limit; no partial job is returned.
+
+The 2D particle fluid continues to use its separate velocity-Verlet integrator.
+N-dimensional stationary-state calculations and original split/symplectic choices
+remain available. Rebuild the frontend and restart the Go server after updating.
 
 ## Methods and compatibility
 

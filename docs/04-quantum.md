@@ -149,13 +149,16 @@ prove small phase or trajectory error. It uses dense transforms for both bases.
 
 ### Explicit RK propagation
 
-For `psi=a+i*b` and a real H, the adapter stores `[a,b]` and evaluates
-`a'=H*b`, `b'=-H*a`. It delegates full coupled-vector steps to RK4, Ralston 3 or
-Nyström 5. These methods are not exactly unitary.
+The web adapter now evaluates `psi'=-i H(t)psi` directly on complex vectors.
+It exposes all 13 fixed RK formulas, six adaptive pairs and four implicit methods;
+the original real/imaginary adapter is retained for compatibility. Explicit methods
+are not exactly unitary. Implicit methods apply H through matrix-free GMRES.
 
 The web layer estimates a spectral bound from the largest absolute row sum of
 H(0), plus `abs(A)*L`. It requires `dt*bound<=2` for RK4 and `<=1` for the other
-explicit choices. This is a conservative admission check, not an accuracy guarantee.
+fixed explicit choices. This admission check is not an accuracy or stability
+guarantee for every formula (Euler has no nonzero imaginary-axis stability interval).
+Adaptive choices use local error control instead of this fixed-step gate.
 If norm leaves [0.5,1.5], the job fails and asks for a smaller dt. No renormalization
 is applied to conceal integration error.
 

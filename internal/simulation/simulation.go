@@ -9,29 +9,31 @@ import (
 )
 
 type Request struct {
-	ND             *NDRequest `json:"nd,omitempty"`
-	Kind           string     `json:"kind"`
-	Basis          string     `json:"basis"`
-	Method         string     `json:"method"`
-	Potential      string     `json:"potential"`
-	Mass           float64    `json:"mass"`
-	Strength       float64    `json:"strength"`
-	Alpha          float64    `json:"alpha"`
-	Center         float64    `json:"center"`
-	HalfWidth      float64    `json:"halfWidth"`
-	Points         int        `json:"points"`
-	States         int        `json:"states"`
-	Dt             float64    `json:"dt"`
-	Steps          int        `json:"steps"`
-	X0             float64    `json:"x0"`
-	P0             float64    `json:"p0"`
-	Sigma          float64    `json:"sigma"`
-	DriveAmplitude float64    `json:"driveAmplitude"`
-	DriveFrequency float64    `json:"driveFrequency"`
-	Particles      int        `json:"particles"`
-	Box            float64    `json:"box"`
-	Temperature    float64    `json:"temperature"`
-	Seed           int        `json:"seed"`
+	AbsoluteTolerance float64    `json:"absoluteTolerance,omitempty"`
+	RelativeTolerance float64    `json:"relativeTolerance,omitempty"`
+	ND                *NDRequest `json:"nd,omitempty"`
+	Kind              string     `json:"kind"`
+	Basis             string     `json:"basis"`
+	Method            string     `json:"method"`
+	Potential         string     `json:"potential"`
+	Mass              float64    `json:"mass"`
+	Strength          float64    `json:"strength"`
+	Alpha             float64    `json:"alpha"`
+	Center            float64    `json:"center"`
+	HalfWidth         float64    `json:"halfWidth"`
+	Points            int        `json:"points"`
+	States            int        `json:"states"`
+	Dt                float64    `json:"dt"`
+	Steps             int        `json:"steps"`
+	X0                float64    `json:"x0"`
+	P0                float64    `json:"p0"`
+	Sigma             float64    `json:"sigma"`
+	DriveAmplitude    float64    `json:"driveAmplitude"`
+	DriveFrequency    float64    `json:"driveFrequency"`
+	Particles         int        `json:"particles"`
+	Box               float64    `json:"box"`
+	Temperature       float64    `json:"temperature"`
+	Seed              int        `json:"seed"`
 }
 type Series struct {
 	Name string    `json:"name"`
@@ -72,6 +74,11 @@ func bounded(v, min, max float64) bool {
 	return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= min && v <= max
 }
 func Validate(r Request) error {
+	for _, tolerance := range []float64{r.AbsoluteTolerance, r.RelativeTolerance} {
+		if tolerance != 0 && !bounded(tolerance, 1e-12, 1e-3) {
+			return fmt.Errorf("solver tolerances must be between 1e-12 and 0.001 (or omitted for defaults)")
+		}
+	}
 	if r.Kind == "nd-spectrum" {
 		return validateND(r)
 	}
@@ -116,7 +123,7 @@ func Validate(r Request) error {
 		}
 	}
 	if r.Kind == "quantum" {
-		if r.Method != "split" && r.Method != "rk4" && r.Method != "ralston3" && r.Method != "nystrom5" {
+		if r.Method != "split" && !vectorMethod(r.Method) {
 			return fmt.Errorf("select a supported quantum propagator")
 		}
 		if !bounded(r.Sigma, .1, 4) || math.Abs(r.X0)+3*r.Sigma >= r.HalfWidth {
@@ -128,8 +135,8 @@ func Validate(r Request) error {
 		if r.Points*r.Points*r.Steps > 40000000 {
 			return fmt.Errorf("this job is too large; reduce grid points or time steps")
 		}
-	} else if r.Kind != "spectrum" && r.Method != "verlet" && r.Method != "leapfrog" && r.Method != "yoshida" {
-		return fmt.Errorf("select velocity-Verlet, leapfrog or Yoshida")
+	} else if r.Kind != "spectrum" && r.Method != "verlet" && r.Method != "leapfrog" && r.Method != "yoshida" && !vectorMethod(r.Method) {
+		return fmt.Errorf("select a supported classical propagator")
 	}
 	return nil
 }
@@ -148,6 +155,12 @@ func potential(r Request) gridData.PotentialOp[float64] {
 }
 
 func Run(ctx context.Context, r Request) (*Result, error) {
+	if r.AbsoluteTolerance == 0 {
+		r.AbsoluteTolerance = 1e-9
+	}
+	if r.RelativeTolerance == 0 {
+		r.RelativeTolerance = 1e-7
+	}
 	if err := Validate(r); err != nil {
 		return nil, err
 	}

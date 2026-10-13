@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	EquationSolver "GoProject/ODESolver"
 	"GoProject/Quantum"
 	"GoProject/gridData"
 	"context"
@@ -108,58 +107,47 @@ func quantum(ctx context.Context, r Request) (*Result, error) {
 	for i := range psi {
 		psi[i] /= complex(math.Sqrt(norm), 0)
 	}
-	var step func(float64) error
+	var step func(float64, float64) error
+	work := &solverWork{limit: 2000000000 / (r.Points * r.Points)}
 	if r.Method == "split" {
 		prop, err := Quantum.NewSplitPropagator(h)
 		if err != nil {
 			return nil, err
 		}
-		step = func(t float64) error { return prop.Step(psi, t, r.Dt) }
+		step = func(t, end float64) error { return prop.Step(psi, t, end-t) }
 	} else {
-		// Conservative spectral bound keeps explicit methods in a useful regime.
-		matrix := h.MatrixAt(0)
-		bound := 0.
-		for i := 0; i < r.Points; i++ {
-			row := 0.
-			for j := 0; j < r.Points; j++ {
-				row += math.Abs(matrix.At(i, j))
+		if _, fixed := fixedRK[r.Method]; fixed {
+			// Conservative spectral bound keeps explicit methods in a useful regime.
+			matrix := h.MatrixAt(0)
+			bound := 0.
+			for i := 0; i < r.Points; i++ {
+				row := 0.
+				for j := 0; j < r.Points; j++ {
+					row += math.Abs(matrix.At(i, j))
+				}
+				bound = math.Max(bound, row)
 			}
-			bound = math.Max(bound, row)
-		}
-		bound += math.Abs(r.DriveAmplitude) * r.HalfWidth
-		limit := 1.
-		if r.Method == "rk4" {
-			limit = 2.
-		}
-		if r.Dt*bound > limit {
-			return nil, fmt.Errorf("time step too large for %s; use dt <= %.6g or choose split-operator", r.Method, limit/bound)
-		}
-		rhs := &schrodinger{h: h, psi: make([]complex128, r.Points), hpsi: make([]complex128, r.Points)}
-		var solver interface {
-			NextStepOnGrid([]float64, float64) error
-		}
-		switch r.Method {
-		case "rk4":
-			solver = (&EquationSolver.RungeKutta4Explicit{}).NewDef(r.Dt, rhs)
-		case "ralston3":
-			solver = (&EquationSolver.Ralston3Order{}).NewDefine(r.Dt, rhs)
-		case "nystrom5":
-			solver = (&EquationSolver.Nystrom5Explicit{}).NewDefine(r.Dt, rhs)
-		}
-		state := make([]float64, 2*r.Points)
-		step = func(t float64) error {
-			for i, z := range psi {
-				state[i] = real(z)
-				state[r.Points+i] = imag(z)
+			bound += math.Abs(r.DriveAmplitude) * r.HalfWidth
+			limit := 1.
+			if r.Method == "rk4" {
+				limit = 2.
 			}
-			if err := solver.NextStepOnGrid(state, t); err != nil {
-				return err
+			if r.Dt*bound > limit {
+				return nil, fmt.Errorf("time step too large for %s; use dt <= %.6g or choose split-operator", r.Method, limit/bound)
 			}
-			for i := range psi {
-				psi[i] = complex(state[i], state[r.Points+i])
+		}
+		rhs := func(t float64, y, out []complex128) error {
+			h.ApplyHComplexAt(y, out, t)
+			for i, v := range out {
+				out[i] = -1i * v
 			}
 			return nil
 		}
+		step, err = complexVectorStepper(ctx, r, rhs, psi, work)
+		if err != nil {
+			return nil, err
+		}
+		result.Notes = append(result.Notes, solverNotes(r)...)
 	}
 	times, norms, means, energies := []float64{}, []float64{}, []float64{}, []float64{}
 	densities := [][]float64{}
@@ -193,13 +181,16 @@ func quantum(ctx context.Context, r Request) (*Result, error) {
 			densities = append(densities, density)
 		}
 		if i < r.Steps {
-			if err := step(t); err != nil {
+			if err := step(t, float64(i+1)*r.Dt); err != nil {
 				return nil, err
 			}
 		}
 	}
 	result.Title = "Wave-packet propagation"
 	result.Metrics = []Metric{{"Initial energy", initialEnergy}, {"Final energy", energies[len(energies)-1]}, {"Maximum norm drift", maxNormDrift}, {"Final mean position", means[len(means)-1]}}
+	if r.Method != "split" {
+		result.Metrics = append(result.Metrics, work.metrics()...)
+	}
 	result.Charts = []Chart{{Title: "Probability density over time", XLabel: "Position", YLabel: "Time", X: x, Y: times, Z: densities}, {Title: "Mean position", XLabel: "Time", YLabel: "Mean position", Series: []Series{{Name: "<x>", X: times, Y: means}}}, {Title: "Wavefunction norm", XLabel: "Time", YLabel: "Norm", Series: []Series{{Name: "Norm", X: times, Y: norms}}}, {Title: "Energy expectation", XLabel: "Time", YLabel: "Energy", Series: []Series{{Name: "<H(t)>", X: times, Y: energies}}}}
 	result.Notes = append(result.Notes, "Initial state: exp(-(x-x0)²/(2 sigma²)) exp(i p0 x), normalized on the grid. Drive: A x sin(omega t). A driven Hamiltonian need not conserve energy.", "No absorbing boundary is applied. Watch for reflections or periodic wrapping. No stepwise renormalization hides numerical error. Compare smaller dt and larger grids.")
 	return result, nil

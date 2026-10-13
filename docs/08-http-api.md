@@ -116,10 +116,28 @@ fields and does not use the non-MD potential/basis parameters.
 | Kind | Allowed methods | Additional behavior |
 | --- | --- | --- |
 | `spectrum` | Method ignored | Dense symmetric H(0) eigensystem |
-| `quantum` | `split`, `rk4`, `ralston3`, `nystrom5` | `points²*steps<=40,000,000`; explicit dt admission bound |
-| `classical` | `verlet`, `leapfrog`, `yoshida` | Force/mass adapter |
+| `quantum` | `split` plus all vector methods below | `points²*steps<=40,000,000`; fixed explicit dt admission bound |
+| `classical` | `verlet`, `leapfrog`, `yoshida` plus all vector methods below | Force/mass adapter and coupled position/velocity ODE |
 | `molecular` | Same classical methods | Morse potential, reduced mass |
 | `md` | `verlet` | 2D periodic LJ model |
+
+Vector method IDs:
+
+- Fixed: `euler`, `heun2`, `midpoint2`, `ralston2`, `ralston3`, `heun3`,
+  `wray3`, `ssp3`, `kutta3`, `rk4`, `rk38`, `ralston4`, `nystrom5`.
+- Adaptive: `heun-euler21`, `fehlberg21`, `bogacki-shampine32`, `fehlberg54`,
+  `cash-karp54`, `dormand-prince54`.
+- Implicit: `implicit-euler`, `trapezoidal`, `implicit-midpoint`, `sdirk2`.
+
+Optional `absoluteTolerance` and `relativeTolerance` must be in `[1e-12,0.001]`;
+omission/zero selects `1e-9` and `1e-7`. They control local error for adaptive
+methods and equation residuals for implicit methods. Adaptive `dt` denotes an
+output interval and maximum internal step, with `steps` such intervals. All
+methods finish at `dt*steps`. Vector methods add RHS evaluations and accepted/
+rejected solver-step metrics. These are not the counts of downsampled plot points.
+Jobs cap RHS evaluations at `floor(2,000,000,000/points²)` for quantum and 100,000 for
+classical/bond; the ten-second deadline still applies. Work-limit failures return
+400 with an explanatory error, and deadlines return 408.
 
 Sampled static quantum potentials must stay within ±1,000,000. Excessive norm drift,
 divergent classical motion and particle overlaps can fail during integration even

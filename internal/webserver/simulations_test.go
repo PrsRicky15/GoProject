@@ -3,10 +3,35 @@ package webserver
 import (
 	"GoProject/internal/simulation"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+func TestVectorPropagatorsThroughHTTP(t *testing.T) {
+	handler := Handler(t.TempDir())
+	methods := []string{"euler", "heun2", "midpoint2", "ralston2", "ralston3", "heun3", "wray3", "ssp3", "kutta3", "rk4", "rk38", "ralston4", "nystrom5", "heun-euler21", "fehlberg21", "bogacki-shampine32", "fehlberg54", "cash-karp54", "dormand-prince54", "implicit-euler", "trapezoidal", "implicit-midpoint", "sdirk2"}
+	for _, method := range methods {
+		t.Run(method, func(t *testing.T) {
+			body := fmt.Sprintf(`{"kind":"quantum","basis":"fourier","method":%q,"potential":"harmonic","mass":1,"strength":1,"alpha":0.5,"halfWidth":8,"points":32,"states":1,"dt":0.001,"steps":4,"x0":1,"sigma":0.7,"absoluteTolerance":1e-10,"relativeTolerance":1e-8}`, method)
+			r := httptest.NewRequest("POST", "http://localhost/api/simulations", strings.NewReader(body))
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, r)
+			if w.Code != 200 {
+				t.Fatalf("%d: %s", w.Code, w.Body)
+			}
+			var result simulation.Result
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Request.Method != method || result.Request.AbsoluteTolerance != 1e-10 || len(result.Metrics) != 7 || result.Charts[0].Y[len(result.Charts[0].Y)-1] != .004 {
+				t.Fatal("incomplete propagation response")
+			}
+		})
+	}
+}
 
 func TestSimulationAPI(t *testing.T) {
 	handler := Handler(t.TempDir())

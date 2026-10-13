@@ -4,6 +4,13 @@
 
 ## Entry points and routes
 
+The propagation selector groups 13 fixed RK methods, six adaptive pairs and four
+implicit methods for quantum, classical and bond modes. Adaptive/implicit choices
+reveal absolute and relative tolerance controls. Adaptive `dt` is labeled as the
+output interval and maximum internal step; final time remains `dt*steps`. The
+result cards include RHS evaluations and accepted/rejected solver steps. All math
+and rejection handling run in Go; TypeScript manages controls and plots.
+
 `Calculations` now includes **N-dimensional states**, with `NDControls` for 2–4
 axes and ten potentials. `SimulationChart` switches grids between heatmap and
 surface; `DensityVolume` renders an isosurface for 3D/4D densities. The result

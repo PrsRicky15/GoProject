@@ -29,27 +29,28 @@ reuse mutable buffers and should belong to one integration at a time.
 
 “Present” means a method body exists, not that arbitrary equations have been validated.
 
-| Concrete type | Intended order | Scalar | Grid | Current page |
+| Legacy concrete type | Intended order | Scalar | Grid | Direct legacy type used by page |
 | --- | --- | --- | --- | --- |
 | `EulerExplicit` | 1 | Present | Present | No |
 | `HeunsExplicit` | 2 | Present | Present | No |
 | `MidPointExplicit` | 2 | Present | Present | No |
 | `Ralston2order` | 2 | Present | Completed | No; convergence test exists |
-| `Ralston3Order` | 3 | Corrected | Completed | Quantum |
+| `Ralston3Order` | 3 | Corrected | Completed | No; new vector engine |
 | `Huens3Explicit` | 3 | Present | Completed | No |
 | `VDHouwenExplicit` | 3 | Present | Completed | No |
 | `SSPRungeKutta3` | 3 | Present | Completed | No |
 | `RungeKutta3Explicit` | 3 | Present | Completed | No |
-| `RungeKutta4Explicit` | 4 | Present | Present | Quantum |
+| `RungeKutta4Explicit` | 4 | Present | Present | No; new vector engine |
 | `RungeKutta38` | 4 | Present | Completed | No |
 | `Ralston4Order` | 4 | Present | Completed | No |
-| `Nystrom5Explicit` | 5 | Corrected | Completed | Quantum |
+| `Nystrom5Explicit` | 5 | Corrected | Completed | No; new vector engine |
 
 All listed fixed-step types now satisfy `ODESolver`. The order column reflects
 the named algorithm, not a blanket certification of every legacy scalar table.
 The new `NewVectorRK` and `NewComplexRK` constructors cover all 13 fixed formulas
 and six embedded pairs with a shared, tested whole-vector engine and reusable
-workspace. See [the explicit/adaptive guide](17-explicit-and-adaptive-vector-propagation.md).
+workspace. All these algorithms are now exposed in web quantum/classical/bond
+calculations through the new engines. See [the explicit/adaptive guide](17-explicit-and-adaptive-vector-propagation.md).
 
 ## Explicit RK equations
 

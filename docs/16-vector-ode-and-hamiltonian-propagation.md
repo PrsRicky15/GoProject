@@ -7,8 +7,9 @@ see [Explicit and adaptive vector propagation](17-explicit-and-adaptive-vector-p
 
 Added 2026-10-12. All existing scalar solvers, `NextStepOnGrid`, explicit methods
 and split propagators are retained. These new Go library APIs accept entire real
-or complex vectors without requiring a dummy scalar callback. Web menus are
-unchanged.
+or complex vectors without requiring a dummy scalar callback. The web calculation
+menu now exposes all four implicit formulas using these coupled engines; see
+[web usage](17-explicit-and-adaptive-vector-propagation.md#running-from-the-webpage).
 
 ## What “vector” means
 

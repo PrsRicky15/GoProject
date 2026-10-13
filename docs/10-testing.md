@@ -137,7 +137,11 @@ It also covers tolerance response, rejected steps, backward integration, exact
 reported endpoints, atomic failure, cancellation, limits, derivative reuse and
 zero allocations after warm-up. Hamiltonian tests cover static DVR/Fourier
 superpositions and all six adaptive pairs on a time-dependent 4D Fourier model.
-These are library tests; no new browser method selections were introduced.
+Web integration tests now exercise all 23 vector method selections in quantum,
+classical and bond calculations, all 23 quantum options through HTTP, driven
+DVR/Fourier references, adaptive rejections/endpoints and solver work limits.
+The frontend tests check method grouping and control classification. Browser
+checks also run adaptive quantum and driven implicit calculations on the built app.
 
 Record the complete request, code revision, runtime versions and relevant native
 library environment. For quantum results record basis, L, N, potential and state

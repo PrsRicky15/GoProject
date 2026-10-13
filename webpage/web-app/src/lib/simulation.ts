@@ -6,6 +6,7 @@ export function ndAxes(dimensions: number): NDAxis[] {
   return Array.from({ length: dimensions }, () => ({ points: dimensions === 2 ? 24 : dimensions === 3 ? 16 : 8, halfWidth: 6, mass: 1, center: 0, scale: 1 }));
 }
 export interface SimulationRequest {
+	absoluteTolerance: number; relativeTolerance: number;
   nd?: NDRequest;
   kind: CalculationKind; basis: string; method: string; potential: string;
   mass: number; strength: number; alpha: number; center: number; halfWidth: number;
@@ -35,9 +36,25 @@ export const CALCULATIONS: Record<CalculationKind, { name: string; description: 
   md: { name: 'Molecular dynamics', description: 'Simulate a 2D Lennard–Jones model fluid with periodic boundaries.' },
 };
 export const CALCULATION_KEYS = Object.keys(CALCULATIONS) as CalculationKind[];
+export const RK_METHODS = [
+  ['euler', 'Euler · 1st order'], ['heun2', 'Heun · 2nd order'], ['midpoint2', 'Explicit midpoint · 2nd order'],
+  ['ralston2', 'Ralston · 2nd order'], ['ralston3', 'Ralston · 3rd order'], ['heun3', 'Heun · 3rd order'],
+  ['wray3', 'Wray / van der Houwen · 3rd order'], ['ssp3', 'SSP Runge–Kutta · 3rd order'], ['kutta3', 'Kutta · 3rd order'],
+  ['rk4', 'Runge–Kutta · 4th order'], ['rk38', 'Runge–Kutta 3/8 · 4th order'], ['ralston4', 'Ralston · 4th order'], ['nystrom5', 'Nyström · 5th order'],
+] as const;
+export const ADAPTIVE_METHODS = [
+  ['heun-euler21', 'Heun–Euler · 2(1)'], ['fehlberg21', 'Fehlberg · 2(1)'], ['bogacki-shampine32', 'Bogacki–Shampine · 3(2)'],
+  ['fehlberg54', 'Fehlberg · 5(4)'], ['cash-karp54', 'Cash–Karp · 5(4)'], ['dormand-prince54', 'Dormand–Prince · 5(4)'],
+] as const;
+export const IMPLICIT_METHODS = [
+  ['implicit-euler', 'Backward Euler · 1st order'], ['trapezoidal', 'Implicit trapezoidal · 2nd order'],
+  ['implicit-midpoint', 'Implicit midpoint · 2nd order'], ['sdirk2', 'SDIRK2 · 2nd order'],
+] as const;
+export const isAdaptiveMethod = (method: string) => ADAPTIVE_METHODS.some(([id]) => id === method);
+export const isImplicitMethod = (method: string) => IMPLICIT_METHODS.some(([id]) => id === method);
 export function simulationDefaults(kind: CalculationKind): SimulationRequest {
   if (kind === 'nd-spectrum') return { ...simulationDefaults('spectrum'), kind, basis: 'fourier', sigma: 1.2, alpha: .25, nd: { axes: ndAxes(2), coupling: .2, softening: .7, separation: 3, wavenumber: 1, order: 4, state: 0, axisX: 0, axisY: 1 } };
-  return { kind, basis: 'dvr', method: kind === 'quantum' ? 'split' : 'verlet', potential: kind === 'molecular' ? 'morse' : 'harmonic', mass: 1, strength: kind === 'molecular' ? 5 : 1, alpha: .5, center: 0, halfWidth: 8, points: 64, states: 4, dt: kind === 'md' ? .002 : .01, steps: 400, x0: 1, p0: 0, sigma: .7, driveAmplitude: 0, driveFrequency: 1, particles: 16, box: 6, temperature: .2, seed: 42 };
+  return { kind, absoluteTolerance: 1e-9, relativeTolerance: 1e-7, basis: 'dvr', method: kind === 'quantum' ? 'split' : 'verlet', potential: kind === 'molecular' ? 'morse' : 'harmonic', mass: 1, strength: kind === 'molecular' ? 5 : 1, alpha: .5, center: 0, halfWidth: 8, points: 64, states: 4, dt: kind === 'md' ? .002 : .01, steps: 400, x0: 1, p0: 0, sigma: .7, driveAmplitude: 0, driveFrequency: 1, particles: 16, box: 6, temperature: .2, seed: 42 };
 }
 
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }

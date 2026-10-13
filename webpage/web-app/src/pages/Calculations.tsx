@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Atom, FlaskConical, Play, RotateCcw } from 'lucide-react';
-import { CALCULATIONS, CALCULATION_KEYS, runSimulation, simulationDefaults } from '../lib/simulation';
+import { CALCULATIONS, CALCULATION_KEYS, runSimulation, simulationDefaults, RK_METHODS, ADAPTIVE_METHODS, IMPLICIT_METHODS, isAdaptiveMethod, isImplicitMethod } from '../lib/simulation';
 import type { CalculationKind, SimulationRequest, SimulationResult } from '../lib/simulation';
 import SimulationChart from '../components/SimulationChart';
 import ParticlePlayback from '../components/ParticlePlayback';
@@ -11,6 +11,7 @@ import './workbench.css';
 import './calculations.css';
 
 type NumberKey = { [K in keyof SimulationRequest]-?: SimulationRequest[K] extends number ? K : never }[keyof SimulationRequest];
+const PROPAGATOR_GROUPS = [['Fixed-step Runge–Kutta', RK_METHODS], ['Adaptive Runge–Kutta', ADAPTIVE_METHODS], ['Implicit methods', IMPLICIT_METHODS]] as const;
 
 export default function Calculations() {
   const [draft, setDraft] = useState(() => simulationDefaults('spectrum'));
@@ -23,6 +24,8 @@ export default function Calculations() {
   const md = draft.kind === 'md';
   const nd = draft.kind === 'nd-spectrum';
   const evolving = draft.kind !== 'spectrum' && !nd;
+  const adaptive = evolving && isAdaptiveMethod(draft.method);
+  const implicit = evolving && isImplicitMethod(draft.method);
   const update = (patch: Partial<SimulationRequest>) => setDraft(d => ({ ...d, ...patch }));
   useEffect(() => {
     if (!request) return;
@@ -68,8 +71,14 @@ export default function Calculations() {
               {draft.kind === 'spectrum' && number('states', 'Eigenstates to show', 1, 8, 1)}
             </>}
             {evolving && <>
-              <div className="field"><label htmlFor="sim-method">Propagator</label><select id="sim-method" disabled={md} value={draft.method} onChange={e => update({ method: e.target.value, ...(e.target.value === 'ralston3' || e.target.value === 'nystrom5' ? { dt: .002 } : {}) })}>{draft.kind === 'quantum' ? <><option value="split">Midpoint split-operator (2nd order)</option><option value="rk4">Runge–Kutta (4th order)</option><option value="ralston3">Ralston (3rd order)</option><option value="nystrom5">Nyström (5th order)</option></> : <><option value="verlet">Velocity-Verlet (2nd order)</option>{!md && <><option value="leapfrog">Leapfrog (2nd order)</option><option value="yoshida">Yoshida (4th order)</option></>}</>}</select></div>
-              <div className="parameter-pair">{number('dt', 'Time step dt', .00001, md ? .01 : .05)}{number('steps', 'Integration steps', 1, 2000, 1)}</div>
+              <div className="field"><label htmlFor="sim-method">Propagator</label><select id="sim-method" disabled={md} value={draft.method} onChange={e => update({ method: e.target.value, ...(draft.kind === 'quantum' && RK_METHODS.some(([id]) => id === e.target.value) ? { dt: Math.min(draft.dt, e.target.value === 'euler' ? .0002 : .002) } : {}) })}>
+                {draft.kind === 'quantum' ? <option value="split">Midpoint split-operator · 2nd order</option> : <><option value="verlet">Velocity-Verlet · 2nd order</option>{!md && <><option value="leapfrog">Leapfrog · 2nd order</option><option value="yoshida">Yoshida · 4th order</option></>}</>}
+                {!md && PROPAGATOR_GROUPS.map(([label, methods]) => <optgroup key={label} label={label}>{methods.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</optgroup>)}
+              </select></div>
+              <div className="parameter-pair">{number('dt', adaptive ? 'Output interval / maximum step' : 'Time step dt', .00001, md ? .01 : .05)}{number('steps', adaptive ? 'Output intervals' : 'Integration steps', 1, 2000, 1)}</div>
+              <p className="field-note">Final time: {Number.isFinite(draft.dt * draft.steps) ? (draft.dt * draft.steps).toPrecision(6) : '—'}. {adaptive && 'Go may take smaller internal steps between outputs.'}</p>
+              {(adaptive || implicit) && <fieldset className="drive-fields"><legend>{adaptive ? 'Adaptive error control' : 'Implicit solve accuracy'}</legend><div className="parameter-pair">{number('absoluteTolerance', 'Absolute tolerance', 1e-12, .001)}{number('relativeTolerance', 'Relative tolerance', 1e-12, .001)}</div><p className="field-note">{adaptive ? 'Tighter tolerances usually require more work. Local error control does not guarantee a global error bound.' : 'These tolerances control each equation solve. Reduce dt separately to check time accuracy.'}</p></fieldset>}
+              {draft.kind === 'quantum' && draft.method !== 'split' && <p className="field-note">Norm is measured without renormalization. Explicit methods can drift; backward Euler and SDIRK2 can damp the state. Compare smaller time steps.</p>}
               {!md && <div className="parameter-pair">{number('x0', draft.kind === 'molecular' ? 'Initial bond coordinate' : 'Initial position x₀', -10, 10)}{number('p0', 'Initial momentum p₀', -20, 20)}</div>}
             </>}
             {draft.kind === 'quantum' && <>
@@ -81,7 +90,7 @@ export default function Calculations() {
             {busy && <button className="cancel-button" type="button" onClick={() => { controller.current?.abort(); setBusy(false); setError('Calculation cancelled.'); }}>Cancel calculation</button>}
             {error && <p className="error" role="alert">{error}</p>}
           </form>
-          <details className="math-help"><summary>Methods & scope</summary><p>Models use atomic units, except the Lennard–Jones fluid, which uses reduced units. The Hamiltonian and classical integrators are computed in Go.</p><p>The verified choices above include completed Ralston/Nyström grid steps and a new midpoint split propagator. Legacy adaptive and implicit solvers are not exposed here until their convergence behavior is verified.</p><p>Bond vibration is a one-dimensional reduced-mass model. The particle mode is a two-dimensional monatomic fluid, not a chemical force field.</p></details>
+          <details className="math-help"><summary>Methods & scope</summary><p>Models use atomic units, except the Lennard–Jones fluid, which uses reduced units. All propagation runs in Go on the complete coupled state.</p><p>Quantum, classical and bond dynamics offer 13 fixed Runge–Kutta methods, six adaptive pairs and four implicit methods. Adaptive results report accepted/rejected steps and evaluation counts. Implicit quantum solves use matrix-free GMRES. The original split and symplectic methods remain available.</p><p>Wave-packet dynamics is one-dimensional in space; the n-dimensional page calculates stationary states. Bond vibration is a one-dimensional reduced-mass model. The particle mode is a two-dimensional model fluid using velocity-Verlet.</p></details>
         </section>
         <div className="calculation-results" aria-live="polite" aria-busy={busy}>
           {busy && <div className="panel run-status" role="status"><span className="loading-dot" /> Go is computing the requested model…</div>}

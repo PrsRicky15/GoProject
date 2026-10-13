@@ -40,7 +40,7 @@ energy levels with ten models; see [web potentials](15-web-multidimensional-pote
 | Fourier operations | FFT ordering/normalization and kinetic application aligned; planner/destructor lock added |
 | Implicit ODE methods | Euler, trapezoidal and midpoint scalar/grid methods repaired; predictor/corrector completed; full coupled Newton solves, damping, derivative callbacks, workspace/factor reuse and SDIRK2 added; see [ODE guide](05-ode-solvers.md#implicit-methods-completed-2026-10-12) |
 | Whole-vector propagation | Direct real/complex nonlinear APIs, matrix-free linear GMRES, and implicit midpoint adapters for static/time-dependent 1D/nD Hamiltonians; see [vector guide](16-vector-ode-and-hamiltonian-propagation.md) |
-| Explicit/adaptive vectors | All 13 fixed RK formulas and six embedded pairs support real/complex vectors, with fixed/adaptive 1D/nD Hamiltonian adapters; [guide](17-explicit-and-adaptive-vector-propagation.md). Library-only; old scalar adaptive implementations remain deprecated |
+| Explicit/adaptive vectors | All 13 fixed RK formulas, six adaptive pairs and four implicit formulas are available in web quantum/classical/bond dynamics; [guide](17-explicit-and-adaptive-vector-propagation.md). nD time propagation remains library-only; old scalar adaptive implementations remain deprecated |
 
 ## Concrete remaining problems
 
@@ -63,7 +63,7 @@ energy levels with ten models; see [web potentials](15-web-multidimensional-pote
 | [numericalMethods.go](../gridData/NumericalRecipies/numericalMethods.go) | Chebyshev first-kind slice/matrix paths return input for order >1 | Only scalar real/complex recurrence is implemented beyond initial orders |
 
 The listed issues do not all affect the current UI. In particular, the page uses
-symmetric DVR grids, supported fixed-step methods and a limited potential set.
+symmetric DVR grids, the new vector propagation engines and a limited potential set.
 Isolation of those paths is not a repair of the unused library code.
 
 ## Partial declarations and unverified methods
@@ -86,7 +86,8 @@ Browser quantum dynamics is 1D; energy-level models also cover 2D–4D. The Go l
 grids with coupled real local potentials. Both use finite domains and have no
 absorbing boundary. Fourier is periodic. The nD solver can avoid the full dense
 matrix, but tensor-grid state size still grows exponentially with dimension.
-There is no automatic spatial refinement or time-step adaptation in active jobs.
+There is no automatic spatial refinement. Adaptive RK choices subdivide output
+intervals according to local error tolerances; fixed and implicit choices keep dt fixed.
 Sampling a narrow packet on a coarse grid can be inaccurate even when validation passes.
 
 Classical scalar-force methods do not supply arbitrary coupled particle forces.

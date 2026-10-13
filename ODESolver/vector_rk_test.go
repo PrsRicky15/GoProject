@@ -12,6 +12,25 @@ import (
 var allRKMethods = []RKMethod{RKEuler, RKHeun2, RKMidpoint2, RKRalston2, RKRalston3, RKHeun3, RKWray3, RKSSP3, RKKutta3, RKClassic4, RKThreeEighths4, RKRalston4, RKNystrom5, RKHeunEuler21, RKFehlberg21, RKBogackiShampine32, RKFehlberg54, RKCashKarp54, RKDormandPrince54}
 var adaptiveRKMethods = []RKMethod{RKHeunEuler21, RKFehlberg21, RKBogackiShampine32, RKFehlberg54, RKCashKarp54, RKDormandPrince54}
 
+func TestAdaptiveAdjacentOutputIntervals(t *testing.T) {
+	for _, m := range adaptiveRKMethods {
+		s, _ := NewVectorAdaptiveRK(func(t float64, y, dy []float64) error { dy[0] = 1; return nil }, m, AdaptiveOptions{InitialStep: .001, MaxStep: .001})
+		for _, direction := range []float64{1, -1} {
+			y := []float64{0}
+			for i := 0; i < 1000; i++ {
+				end := direction * float64(i+1) * .001
+				r, err := s.Integrate(y, direction*float64(i)*.001, end)
+				if err != nil || r.Time != end {
+					t.Fatalf("%s interval %d: %+v %v", m, i, r, err)
+				}
+			}
+			if math.Abs(y[0]-direction) > 1e-12 {
+				t.Fatal("interval accumulation error", y)
+			}
+		}
+	}
+}
+
 // Nonlinear, coupled and non-autonomous; exact solution (exp(t),exp(-t)).
 func manufacturedRK(t float64, y, dy []float64) error {
 	dy[0] = y[0]*y[1] + math.Exp(t) - 1

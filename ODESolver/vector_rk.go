@@ -306,7 +306,10 @@ func (a *adaptiveRK[T]) IntegrateContext(ctx context.Context, y []T, tStart, tEn
 			copy(e.state, e.next)
 			h = math.Min(o.MaxStep, math.Max(o.MinStep, step*factor))
 			r.NextStep = direction * h
-			if step == remaining {
+			// A capped step can round directly to tEnd even when subtraction
+			// made remaining a fraction of an ulp larger than step. Do not
+			// attempt a zero-length extra step after reaching that endpoint.
+			if step == remaining || t+signed == tEnd {
 				if err = ctx.Err(); err != nil {
 					return
 				}

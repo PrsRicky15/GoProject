@@ -14,7 +14,10 @@ E = p²/(2m) + V(x)
 
 It accepts the harmonic, Morse, symmetric double-well and free potentials. The
 adapter converts momentum to velocity, divides force by mass, and invokes
-velocity-Verlet, leapfrog or Yoshida. Units follow the atomic-unit model convention.
+velocity-Verlet, leapfrog or Yoshida, or a selected vector ODE method. All 13 fixed
+RK methods, six adaptive pairs and four implicit formulas are exposed. The vector
+methods advance `[x,v]` together with RHS `[v,F(x)/m]`; they do not solve independent
+scalar components. Units follow the atomic-unit model convention.
 There is no damping, forcing, thermostat or constraint in this mode.
 
 Every step is executed. Output uses stride `ceil(steps/400)` plus the last sample,

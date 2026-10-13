@@ -122,7 +122,9 @@ Go's `internal` directory rules restrict these packages to this module tree.
 | [plotmath/sampling.go](../internal/plotmath/sampling.go) | Plot schemas, mode limits, coordinate generation and sampling |
 | [plotmath/plotmath_test.go](../internal/plotmath/plotmath_test.go) | Parser/sampler tests |
 | [simulation/simulation.go](../internal/simulation/simulation.go) | Common schemas, validation, potential construction, dispatch and finite-output checks |
-| [simulation/quantum.go](../internal/simulation/quantum.go) | Spectrum and propagation jobs; real/imaginary ODE adapter |
+| [simulation/quantum.go](../internal/simulation/quantum.go) | Spectrum and propagation jobs; direct whole-complex-vector evolution; retained legacy real/imaginary adapter |
+| [simulation/propagators.go](../internal/simulation/propagators.go) | Web method catalog, adaptive/implicit dispatch, bounded RHS work and solver diagnostics |
+| [simulation/propagators_test.go](../internal/simulation/propagators_test.go) | All 23 vector choices, coupled references, driven motion, rejection, limits and cancellation |
 | [simulation/classical.go](../internal/simulation/classical.go) | Force/mass adapter and scalar/Morse trajectories |
 | [simulation/md.go](../internal/simulation/md.go) | LJ job, sampling, metrics and result notes |
 | [simulation/simulation_test.go](../internal/simulation/simulation_test.go) | Cross-package numerical reference tests |
